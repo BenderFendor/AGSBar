@@ -1,6 +1,33 @@
 // https://gitlab.gnome.org/GNOME/gtk/-/blob/gtk-3-24/gtk/theme/Adwaita/_colors-public.scss
-$fg-color: #{"@theme_fg_color"};
-$bg-color: #{"@theme_bg_color"};
+/*
+* Using colors from Matugen
+*/
+
+// Main background colors from user's selection
+$bg-color: #{"@surface_container"};
+$fg-color: #{"@on_surface"};
+
+// Button colors (Normal State)
+$button-text-color:         #{"@on_primary_container"};
+$button-border-color:       #{"@on_primary"};
+$button-gradient-start:     #{"@primary"};
+$button-gradient-end:       #{"@primary_container"};
+$button-glow-color:         #{"@on_primary_container"};
+$button-highlight-color:    #{"@inverse_primary"};
+$button-text-shadow-color:  #{"@on_primary_fixed"};
+
+// Button colors (Hover State)
+$active-workspace: #{"@surface_tint"};
+$button-hover-text-color:        #{"@on_yellow"};
+$button-hover-text-shadow-color: #{"@white_value"};
+$button-hover-border-color:      #{"@yellow"};
+$button-hover-gradient-start:    #{"@on_yellow_container"};
+$button-hover-gradient-end:      #{"@yellow"};
+$button-hover-glow-color:        #{"@on_yellow_container"};
+
+// Shadow color for active state
+$shadow-color: #{"@shadow"};
+
 
 window#bar {
   background: transparent;
@@ -8,15 +35,57 @@ window#bar {
   font-weight: bold;
 
   > box {
-    background: $bg-color;
+    background: transparent;
     border-radius: 10px;
-    margin: 8px;
+    margin: 10px;
+    padding: 10px;
   }
 
   button {
-    border-radius: 8px;
-    margin: 2px;
-    min-height: 0;
-    padding: 4px 8px;
+    /* Font and Sizing */
+    font-family: Inter, sans-serif;
+    font-size: 15px;
+    font-weight: bold;
+    color: $button-text-color;
+    padding: 5px 25px;
+    margin: 5px;
+
+    /* Border and Shape */
+    border: 0px solid $button-border-color;
+    border-radius: 0px;
+
+    /* Background Gradient */
+    background: $button-gradient-end;
+
+    /* Inner and Outer Shadows for 3D Effect */
+    box-shadow:
+      4px 7px 0 0 rgba(20,20,20,0.5); /* Bottom edge highlight */
+
+    /* Text Shadow */
+    text-shadow: 0 1px 1px $button-text-shadow-color;
+
+    /* Interaction */
+    cursor: pointer;
+    user-select: none;
+  }
+  button:hover {
+    /* Green/Yellowish glow on hover */
+    background: linear-gradient(to bottom, $button-hover-gradient-start, $button-hover-gradient-end);
+    color: $button-hover-text-color;
+    text-shadow: 0 1px 1px $button-hover-text-shadow-color;
+    border-color: $button-hover-border-color;
+    box-shadow:
+      inset 0 0 1px 1px $button-hover-glow-color,
+      0 1px 0 0 $button-hover-gradient-end;
+  }
+  button.active-workspace
+  {
+    background: $active-workspace;
+  }
+  button:active {
+    /* "Pressed in" effect */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
+    padding: 6px 15px 4px; /* Nudge text down */
   }
 }

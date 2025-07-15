@@ -289,7 +289,6 @@ export default function Bar(gdkmonitor) {
     >
       <centerbox>
         <box $type="start">
-          <Mpris />
           <Workspaces />
         </box>
         <box $type="center">
