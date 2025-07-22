@@ -15,7 +15,8 @@ import { For, With, createBinding } from "ags"
 import { createPoll } from "ags/time"
 import { execAsync } from "ags/process"
 // The Hyprland service is now imported from AstalHyprland for direct integration
-import Hyprland from "gi://AstalHyprland";
+import Hyprland from "gi://AstalHyprland"
+import Notifd from "gi://AstalNotifd"
 
 function Mpris() {
   const mpris = AstalMpris.get_default()
@@ -260,7 +261,7 @@ function Battery() {
   )
 }
 
-function Clock({ format = "%H:%M" }) {
+function Clock({ format = "%I:%M" }) {
   const time = createPoll("", 1000, () => {
     return GLib.DateTime.new_now_local().format(format)
   })
@@ -287,16 +288,16 @@ export default function Bar(gdkmonitor) {
       anchor={TOP | LEFT | RIGHT}
       application={app}
     >
+
       <centerbox>
         <box $type="start">
           <Workspaces />
         </box>
         <box $type="center">
-            <Clock />
         </box>
         <box $type="end">
           <Tray />
-          <Wireless />
+            <Clock />
           <AudioOutput />
           <Battery />
         </box>
