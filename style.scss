@@ -3,7 +3,7 @@
  */
 
 // Main background colors from user's selection
-$bg-color: #{"@surface_container"};
+$bg-color: #{"@background"};
 $fg-color: #{"@on_surface"};
 
 // Button colors (Normal State)
@@ -25,8 +25,8 @@ $button-hover-gradient-end: #{"@tertiary"};
 $button-hover-glow-color: #{"@on_tertiary_container"};
 
 // Shadow color for active state
-$shadow-color: #{"@shadow"};
-
+$shadow-color-transparent: rgba(0, 0, 0, 0.5);
+$shadow-color: $shadow-color-transparent;
 // Misc colors
 $error: red;
 
@@ -44,27 +44,27 @@ window#bar {
     background: $button-gradient-start; /* Different gradient for popovers */
   }
 
-  &.mpris-popover
-  {
-    /* Specific styles for MPRIS popover buttons */
-    padding: 11px 10px;
-    margin: -1 5px;
-    font-size: 13px;
-    border-radius: -1px;
-    background: $button-gradient-start; /* Different gradient for MPRIS */
+  // Media Toggle Button in Bar
+  .media-toggle-btn {
+    background: #{"@background"};
+    border: 0px solid #{"@on_surface"};
+    border-radius: 0px;
+    padding: 5px 15px;
+    margin: 5px;
+    color: #{"@on_surface"};
+    box-shadow: 3px 3px 0 0.5px $shadow-color-transparent;
+    
+    &:hover {
+      background: #{"@primary"};
+      color: #{"@on_primary"};
+      box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
+    }
+    
+    &:active {
+      background: #{"@tertiary"};
+      box-shadow: inset 1px 1px 0 $shadow-color-transparent;
+    }
   }
-
-  &.cover-art
-  {
-    /* Specific styles for cover art buttons */
-    padding: 4px 15px;
-    margin: -1 5px;
-    font-size: 13px;
-    background: $button-gradient-start; /* Different gradient for cover art */
-  }
-
-
-
 
   > box {
     background: transparent;
@@ -90,14 +90,10 @@ window#bar {
     background: $button-gradient-end;
 
     /* Inner and Outer Shadows for 3D Effect */
-    box-shadow: 4px 7px 0 0 rgba(20, 20, 20, 0.8); /* Bottom edge highlight */
+    box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
 
     /* Text Shadow */
     text-shadow: 0 1px 1px $button-text-shadow-color;
-
-    /* Interaction */
-    cursor: pointer;
-    user-select: none;
 
     &:hover {
       /* Green/Yellowish glow on hover */
@@ -122,6 +118,296 @@ window#bar {
   }
 }
 
+// Media Player Window
+.media-player-window {
+  background: transparent;
+}
+
+// Media Player Styles - apply globally
+.media-player-container {
+  background: #{"@background"};
+  border: none; /* Remove border */
+  border-radius: 0px;
+  box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0,0,0,0.15);
+  padding: 15px; /* More compact padding */
+  margin: 10px;
+  min-width: 350px; /* Smaller width */
+  position: relative;
+  overflow: hidden;
+  
+  /* Add a subtle inner glow */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  /* Ensure content is above the overlay */
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+}
+
+.media-header {
+  padding: 10px 15px; /* More compact */
+  margin: -15px -15px 15px -15px; /* Adjusted for new padding */
+  background: #{"@primary_container"};
+  box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
+  
+  /* Flexbox for proper header layout */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+    .media-header-title {
+      font-size: 14px; /* Smaller font */
+      font-weight: bold;
+      color: #{"@on_primary_container"};
+      flex-grow: 1;
+    }
+    
+    .media-close-btn {
+      background: #{"@red"}; /* Red background */
+      border: 0px solid #{"@on_red"};
+      border-radius: 0px;
+      padding: 6px; /* Smaller padding */
+      margin: 0;
+      color: #{"@on_red"};
+      box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
+      flex-shrink: 0;
+      min-width: 24px;
+      min-height: 24px;
+      
+      &:hover {
+        background: #{"@red_container"};
+        color: #{"@on_red_container"};
+        box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+      }
+      
+      &:active {
+        background: #{"@error"};
+        box-shadow: inset 1px 1px 0 $shadow-color-transparent;
+      }
+      
+      image {
+        -gtk-icon-size: 12px; /* Smaller X icon */
+      }
+    }
+  }
+
+  .media-cover-section {
+    margin-bottom: 15px; /* More compact spacing */
+    display: flex;
+    justify-content: center;
+    
+    .media-cover-image {
+      border: 0px solid #{"@on_surface"};
+      border-radius: 0px;
+      width: 250px; /* Requested size */
+      height: 250px; /* Square */
+      background: transparent;
+      /* GTK Image styling for square aspect */
+
+      -gtk-icon-size: 300px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      
+      /* For actual image elements */
+      img {
+        width: 250px;
+        height: 250px;
+        object-fit: cover;
+        object-position: center;
+      }
+    }
+  }
+
+  .media-info-section {
+    margin-bottom: 15px; /* More compact */
+    
+    .media-song-title {
+      font-size: 16px; /* Slightly smaller */
+      font-weight: bold;
+      color: #{"@on_surface"};
+      margin-bottom: 3px; /* Less spacing */
+    }
+    
+    .media-song-artist {
+      font-size: 13px; /* Slightly smaller */
+      font-weight: normal;
+      color: #{"@on_surface"}CC;
+    }
+  }
+
+  .media-progress-section {
+    margin-bottom: 15px; /* More compact */
+    
+    .media-progress-scale {
+      background: transparent;
+      border: 0px solid #{"@on_surface"};
+      border-radius: 0px;
+      min-height: 6px; /* Even thinner for compact design */
+      position: relative;
+      box-shadow: inset 0 0 0 1px #{"@outline"}, inset 1px 1px 0 0.5px $shadow-color-transparent;
+
+      trough {
+        background: #{"@surface_variant"};
+        border-radius: 0px;
+        min-height: 6px;
+        box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2);
+      }
+      
+      highlight {
+        background: linear-gradient(90deg, #{"@primary"}, #{"@tertiary"});
+        border-radius: 0px;
+        min-height: 6px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        position: relative;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: 0;
+          right: 0;
+          bottom: -2px;
+          background: inherit;
+          filter: blur(4px);
+          opacity: 0.3;
+          z-index: -1;
+        }
+      }
+      
+      slider {
+        background: #{"@on_primary"};
+        border: 2px solid #{"@primary"};
+        border-radius: 0px;
+        min-width: 14px; /* Slightly smaller */
+        min-height: 14px;
+        box-shadow: 2px 2px 0 0.5px $shadow-color-transparent, 0 0 0 2px #{"@background"};
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.2);
+          box-shadow: 3px 3px 0 0.5px $shadow-color-transparent, 0 0 0 2px #{"@primary"};
+        }
+      }
+    }
+    
+    .media-time-section {
+      margin-top: 8px; /* Less spacing */
+      
+      .media-time-current, .media-time-total {
+        font-size: 11px; /* Smaller font */
+        color: #{"@on_surface"}99;
+        font-weight: 500;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+      }
+    }
+  }
+
+  .media-controls-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* Smaller gap for compact design */
+    
+    .media-btn {
+      background: #{"@surface_container"};
+      border: 0px solid #{"@on_surface"};
+      border-radius: 0px;
+      padding: 10px; /* Smaller padding */
+      color: #{"@on_surface"};
+      box-shadow: 2px 2px 0 0.5px $shadow-color-transparent; /* Smaller shadows */
+      min-width: 35px; /* Smaller buttons */
+      min-height: 35px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      
+      /* Add subtle hover animation */
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.1);
+        transition: all 0.3s ease;
+        transform: translate(-50%, -50%);
+        border-radius: 0px;
+      }
+      
+      &:hover {
+        background: #{"@primary"};
+        color: #{"@on_primary"};
+        box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+        transform: translateY(-1px);
+        
+        &::before {
+          width: 100%;
+          height: 100%;
+        }
+      }
+      
+      &:active {
+        background: #{"@tertiary"};
+        box-shadow: inset 1px 1px 0 $shadow-color-transparent;
+        transform: translateY(1px);
+      }
+      
+      &.media-btn-play {
+        background: #{"@primary"};
+        color: #{"@on_primary"};
+        min-width: 45px; /* Smaller play button */
+        min-height: 45px;
+        padding: 12px;
+        box-shadow: 3px 3px 0 0.5px $shadow-color-transparent;
+        
+        &:hover {
+          background: #{"@tertiary"};
+          color: #{"@on_tertiary"};
+          box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
+          transform: translateY(-2px);
+        }
+        
+        &:active {
+          background: #{"@inverse_primary"};
+          box-shadow: inset 2px 2px 0 $shadow-color-transparent;
+          transform: translateY(2px);
+        }
+      }
+      
+      /* Specifically ensure prev/next buttons are visible */
+      &.media-btn-prev,
+      &.media-btn-next {
+        opacity: 1 !important;
+        display: block !important;
+        visibility: visible !important;
+      }
+      
+      image {
+        -gtk-icon-size: 16px; /* Smaller icons */
+        position: relative;
+        z-index: 3;
+      }
+      
+      &.media-btn-play image {
+        -gtk-icon-size: 18px; /* Smaller play icon */
+      }
+    }
+  }
+
+
 window.NotificationPopups {
   all: unset;
 }
@@ -129,25 +415,25 @@ window.NotificationPopups {
 .Notification {
   background-color: $bg-color;
   margin: 0.5rem 1rem;
-  box-shadow: 4px 7px 0 0 rgba(20, 20, 20, 0.8); /* Bottom edge highlight */
+  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
 
   &.critical {
-    border: 1pt solid gtkalpha($error, 0.4);
+    border: 1pt solid $error;
 
     .header {
       .app-name {
-        color: gtkalpha($error, 0.8);
+        color: $error;
       }
 
       .app-icon {
-        color: gtkalpha($error, 0.6);
+        color: $error;
       }
     }
   }
 
   .header {
     padding: 0.5rem;
-    color: gtkalpha($fg-color, 0.5);
+    color: $fg-color;
 
     .app-icon {
       margin: 0 0.4rem;
@@ -183,11 +469,11 @@ window.NotificationPopups {
     }
 
     .body {
-      color: gtkalpha($fg-color, 0.8);
+      color: $fg-color;
     }
 
     .image {
-      border: 1px solid gtkalpha($fg-color, 0.02);
+      border: 1px solid $fg-color;
       margin-right: 0.5rem;
       border-radius: 9px;
       min-width: 100px;
@@ -212,5 +498,73 @@ window.NotificationPopups {
         margin-right: 0;
       }
     }
+  }
+}
+
+/* Wallpaper Picker Styles */
+window[name="wallpaperpicker"] {
+  background-color: $bg-color;
+  border-radius: 12px;
+  border: 2px solid $button-border-color;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  .directory {
+    color: $button-text-color;
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  button {
+    background: linear-gradient(135deg, $button-gradient-start, $button-gradient-end);
+    border: 1px solid $button-border-color;
+    border-radius: 8px;
+    color: $button-text-color;
+    padding: 8px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: linear-gradient(135deg, $button-hover-gradient-start, $button-hover-gradient-end);
+      border-color: $button-hover-border-color;
+      color: $button-hover-text-color;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    picture {
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    label {
+      color: inherit;
+      font-size: 0.8rem;
+    }
+  }
+
+  flowbox {
+    padding: 8px;
+
+    button {
+      margin: 4px;
+    }
+  }
+
+  scrolledwindow {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  separator {
+    background-color: rgba(255, 255, 255, 0.1);
+    min-height: 1px;
+  }
+
+  label {
+    color: $fg-color;
   }
 }

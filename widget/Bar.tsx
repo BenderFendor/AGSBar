@@ -17,6 +17,125 @@ import { execAsync } from "ags/process"
 // The Hyprland service is now imported from AstalHyprland for direct integration
 import Hyprland from "gi://AstalHyprland"
 import Notifd from "gi://AstalNotifd"
+import { toggleWallpaperPicker } from "./wallpaperpicker"
+
+function MediaPlayerWindow() {
+  const mpris = AstalMpris.get_default();
+  const players = createBinding(mpris, "players");
+  
+  return (
+    <window
+      name="media-player"
+      visible={false}
+      exclusivity={Astal.Exclusivity.NORMAL}
+      layer={Astal.Layer.TOP}
+      anchor={Astal.WindowAnchor.TOP | Astal.WindowAnchor.CENTER}
+      marginTop={10}
+      application={app}
+      class="media-player-window"
+    >
+      <For each={players}>
+        {(player: any) => (
+          <box orientation={Gtk.Orientation.VERTICAL} class="media-player-container">
+            {/* Header with close button */}
+            <box orientation={Gtk.Orientation.HORIZONTAL} class="media-header">
+              <label label="Media Player" class="media-header-title" />
+              <box hexpand />
+              <button 
+                onClicked={() => {
+                  const window = app.get_window("media-player");
+                  if (window) window.visible = false;
+                }}
+                class="media-close-btn"
+              >
+                <image iconName="window-close-symbolic" />
+              </button>
+            </box>
+
+            {/* Cover art */}
+            <box class="media-cover-section" hexpand>
+              <image overflow={Gtk.Overflow.HIDDEN} file={createBinding(player, "coverArt")} class="media-cover-image" />
+            </box>
+
+            {/* Media details */}
+            <box orientation={Gtk.Orientation.VERTICAL} halign={Gtk.Align.CENTER} class="media-info-section">
+              <label halign={Gtk.Align.CENTER} label={createBinding(player, "title")} class="media-song-title" />
+              <label halign={Gtk.Align.CENTER} label={createBinding(player, "artist")} class="media-song-artist" />
+            </box>
+
+            {/* Progress section with clickable progress bar */}
+            <box orientation={Gtk.Orientation.VERTICAL} class="media-progress-section">
+              <slider
+                class="media-progress-scale"
+                orientation={Gtk.Orientation.HORIZONTAL}
+                drawValue={false}
+                value={createBinding(player, "position")((pos: number) => pos || 0)}
+                max={createBinding(player, "length")((len: number) => len || 100)}
+                onChangeValue={({ value }: { value: number }) => {
+                  if (player.set_position) {
+                    player.set_position(value);
+                  }
+                }}
+              />
+              <box orientation={Gtk.Orientation.HORIZONTAL} class="media-time-section">
+                <label 
+                  halign={Gtk.Align.START}
+                  label={createBinding(player, "position")((pos: number) => {
+                    const minutes = Math.floor(pos / 60);
+                    const seconds = Math.floor(pos % 60);
+                    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  })} 
+                  class="media-time-current" 
+                />
+                <box hexpand />
+                <label 
+                  halign={Gtk.Align.END}
+                  label={createBinding(player, "length")((len: number) => {
+                    const minutes = Math.floor(len / 60);
+                    const seconds = Math.floor(len % 60);
+                    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  })} 
+                  class="media-time-total" 
+                />
+              </box>
+            </box>
+
+            {/* Control buttons */}
+            <box orientation={Gtk.Orientation.HORIZONTAL} halign={Gtk.Align.CENTER} class="media-controls-section">
+              {/* Previous button */}
+              <button 
+                onClicked={() => player.previous()} 
+                class="media-btn media-btn-prev"
+              >
+                <image iconName="media-skip-backward-symbolic" />
+              </button>
+
+              {/* Play/Pause button */}
+              <button 
+                onClicked={() => player.play_pause()} 
+                class="media-btn media-btn-play"
+              >
+                <image
+                  iconName={createBinding(player, "playbackStatus")((s: any) => 
+                    s === AstalMpris.PlaybackStatus.PLAYING ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
+                  )}
+                />
+              </button>
+
+              {/* Next button */}
+              <button 
+                onClicked={() => player.next()} 
+                class="media-btn media-btn-next"
+              >
+                <image iconName="media-skip-forward-symbolic" />
+              </button>
+            </box>
+          </box>
+        )}
+      </For>
+    </window>
+  );
+}
 
 function Mpris() {
   const mpris = AstalMpris.get_default();
@@ -24,68 +143,36 @@ function Mpris() {
   const players = createBinding(mpris, "players");
 
   // Helper function to get artist and title
-  function getArtistAndTitle(player) {
-    return createBinding(player, "artist")((artist) => {
+  function getArtistAndTitle(player: any) {
+    return createBinding(player, "artist")((artist: string) => {
       const title = player.title;
       return artist ? `${artist} - ${title}` : title;
     });
   }
 
+  // Function to toggle media player window
+  function toggleMediaPlayer() {
+    const window = app.get_window("media-player");
+    if (window) {
+      window.visible = !window.visible;
+    }
+  }
+
   return (
-    <menubutton>
-      <box>
-        {/* Display current player's artist and title */}
-        <For each={players}>
-          {(player) => {
-            const [app] = apps.exact_query(player.entry);
-            // Ensure 'app' exists to prevent crashes if no matching app is found.
-            return <label label={getArtistAndTitle(player)} visible={!!app} />;
-          }}
-        </For>
-      </box>
-
-      {/* Popover for media controls */}
-      <popover class="mpris-popover">
-        <box spacing={4} orientation={Gtk.Orientation.VERTICAL}>
+    <box>
+      <button onClicked={toggleMediaPlayer} class="media-toggle-btn">
+        <box>
+          {/* Display current player's artist and title */}
           <For each={players}>
-            {(player) => (
-              <box spacing={4} widthRequest={200}>
-                {/* Cover art */}
-                <box overflow={Gtk.Overflow.HIDDEN} class="cover-art">
-                  <image pixelSize={400} file={createBinding(player, "coverArt")} />
-                </box>
-
-                {/* Media details and controls */}
-                <box valign={Gtk.Align.CENTER} orientation={Gtk.Orientation.VERTICAL}>
-                  <label xalign={0} label={createBinding(player, "title")} />
-                  <label xalign={0} label={createBinding(player, "artist")} />
-
-                  {/* Previous button */}
-                  <button onClicked={() => player.previous()} visible={createBinding(player, "canGoPrevious")}>
-                    <image iconName="media-seek-backward-symbolic" />
-                  </button>
-
-                  {/* Play/Pause button */}
-                  <button onClicked={() => player.play_pause()} visible={createBinding(player, "canControl")}>
-                    <box>
-                      <image
-                        iconName="media-playback-start-symbolic"
-                        visible={createBinding(player, "playbackStatus")((s) => s === AstalMpris.PlaybackStatus.PLAYING)}
-                      />
-                    </box>
-                  </button>
-
-                  {/* Next button */}
-                  <button onClicked={() => player.next()} visible={createBinding(player, "canGoNext")}>
-                    <image iconName="media-seek-forward-symbolic" />
-                  </button>
-                </box>
-              </box>
-            )}
+            {(player: any) => {
+              const [app] = apps.exact_query(player.entry);
+              // Ensure 'app' exists to prevent crashes if no matching app is found.
+              return <label label={getArtistAndTitle(player)} visible={!!app} />;
+            }}
           </For>
         </box>
-      </popover>
-    </menubutton>
+      </button>
+    </box>
   );
 }
 
@@ -129,7 +216,7 @@ function Tray() {
   const tray = AstalTray.get_default()
   const items = createBinding(tray, "items")
 
-  const init = (btn, item) => {
+  const init = (btn: any, item: any) => {
     btn.menuModel = item.menuModel
     btn.insert_action_group("dbusmenu", item.actionGroup)
     item.connect("notify::action-group", () => {
@@ -154,11 +241,11 @@ function Wireless() {
   const network = AstalNetwork.get_default()
   const wifi = createBinding(network, "wifi")
 
-  const sorted = (arr) => {
-    return arr.filter((ap) => !!ap.ssid).sort((a, b) => b.strength - a.strength)
+  const sorted = (arr: any[]) => {
+    return arr.filter((ap: any) => !!ap.ssid).sort((a: any, b: any) => b.strength - a.strength)
   }
 
-  async function connect(ap) {
+  async function connect(ap: any) {
     try {
       await execAsync(`nmcli d wifi connect ${ap.bssid}`)
     } catch (error) {
@@ -230,7 +317,7 @@ function Battery() {
     "percentage",
   )((p) => `${Math.floor(p * 100)}%`)
 
-  const setProfile = (profile) => {
+  const setProfile = (profile: any) => {
     powerprofiles.set_active_profile(profile)
   }
 
@@ -242,7 +329,7 @@ function Battery() {
       </box>
       <popover>
         <box orientation={Gtk.Orientation.VERTICAL}>
-          {powerprofiles.get_profiles().map(({ profile }) => (
+          {powerprofiles.get_profiles().map(({ profile }: { profile: any }) => (
             <button onClicked={() => setProfile(profile)}>
               <label label={profile} xalign={0} />
             </button>
@@ -268,33 +355,44 @@ function Clock({ format = "%I:%M" }) {
   )
 }
 
-export default function Bar(gdkmonitor) {
+export default function Bar(gdkmonitor: any) {
   const { TOP, LEFT, RIGHT } = Astal.WindowAnchor
 
   return (
-    <window
-      visible
-      name="bar"
-      gdkmonitor={gdkmonitor}
-      exclusivity={Astal.Exclusivity.EXCLUSIVE}
-      anchor={TOP | LEFT | RIGHT}
-      application={app}
-    >
-
-      <centerbox>
-        <box $type="start">
-          <Workspaces />
-        </box>
-        <box $type="center">
-          <Mpris />
-        </box>
-        <box $type="end">
-          <Tray />
+    <>
+      {/* Main Bar Window */}
+      <window
+        visible
+        name="bar"
+        gdkmonitor={gdkmonitor}
+        exclusivity={Astal.Exclusivity.EXCLUSIVE}
+        anchor={TOP | LEFT | RIGHT}
+        application={app}
+      >
+        <centerbox>
+          <box $type="start">
+            <Workspaces />
+          </box>
+          <box $type="center">
+            <Mpris />
+          </box>
+          <box $type="end">
+            <Tray />
             <Clock />
-          <AudioOutput />
-          <Battery />
-        </box>
-      </centerbox>
-    </window>
+            <AudioOutput />
+            <Battery />
+            <button
+              onClicked={toggleWallpaperPicker}
+              tooltipText="Wallpaper Picker"
+            >
+              <image iconName="preferences-desktop-wallpaper-symbolic" />
+            </button>
+          </box>
+        </centerbox>
+      </window>
+
+      {/* Media Player Window */}
+      <MediaPlayerWindow />
+    </>
   )
 }
