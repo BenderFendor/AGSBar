@@ -135,15 +135,19 @@ window#bar {
 }
 
 .media-header {
-  padding: 10px 15px; /* More compact */
+  padding: 0px 15px; /* Remove vertical padding to let height control it */
   margin: -15px -15px 15px -15px; /* Adjusted for new padding */
   background: #{"@primary_container"};
   box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
+  min-height: 40px; /* Fixed height */
+  /* Center content vertically and horizontally */
 
     .media-header-title {
-      font-size: 14px; /* Smaller font */
+      font-family: "Product Sans", "Inter", sans-serif;
+      font-size: 12px; /* Product Sans Bold 12px */
       font-weight: bold;
       color: #{"@on_primary_container"};
+      /* Center the text */
     }
     
     .media-close-btn {
@@ -422,61 +426,253 @@ window.NotificationPopups {
 }
 
 /* Wallpaper Picker Styles */
-window[name="wallpaperpicker"] {
+.wallpaper-picker-window {
   background-color: $bg-color;
-  border-radius: 12px;
-  border: 2px solid $button-border-color;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-radius: 0px;
+  border: 0px solid $button-border-color;
+  box-shadow: 4px 7px 0 0 $shadow-color;
+  transition: all 0.3s ease;
+  
+  &.opening {
+    animation: wallpaper-picker-open 0.3s ease-out;
+  }
+  
+  &.closing {
+    animation: wallpaper-picker-close 0.2s ease-in;
+  }
+}
+
+@keyframes wallpaper-picker-open {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wallpaper-picker-close {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.wallpaper-picker-container {
+  background-color: $bg-color;
+  border-radius: 0px;
+}
+
+.wallpaper-header {
+  padding: 0px 15px;
+  background: #{"@primary_container"};
+  box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
+  min-height: 40px;
+  border-radius: 0px;
+
+  &.draggable-header {
+    cursor: move;
+  }
+
+  .wallpaper-header-title {
+    font-family: "Product Sans", "Inter", sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: #{"@on_primary_container"};
+  }
+
+  .wallpaper-close-btn {
+    background: #{"@red"};
+    border: 0px solid #{"@on_red"};
+    border-radius: 0px;
+    padding: 6px;
+    margin: 0;
+    color: #{"@on_red"};
+    box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
+    min-width: 24px;
+    min-height: 24px;
+    
+    &:hover {
+      background: #{"@red_container"};
+      color: #{"@on_red_container"};
+      box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+    }
+    
+    &:active {
+      background: #{"@error"};
+      box-shadow: inset 1px 1px 0 $shadow-color-transparent;
+    }
+    
+    image {
+      -gtk-icon-size: 12px;
+    }
+  }
+}
+
+.wallpaper-control-btn {
+  /* Font and Sizing */
+  font-family: Inter, sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  color: $button-text-color;
+  padding: 5px 25px;
+  margin: 5px;
+
+  /* Border and Shape */
+  border: 0px solid $button-border-color;
+  border-radius: 0px;
+
+  /* Background Gradient */
+  background: $button-gradient-end;
+
+  /* Inner and Outer Shadows for 3D Effect */
+  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+
+  /* Text Shadow */
+  text-shadow: 0 1px 1px $button-text-shadow-color;
+
+  &:hover {
+    /* Green/Yellowish glow on hover */
+    background: linear-gradient(to bottom, $button-hover-gradient-start, $button-hover-gradient-end);
+    color: $button-hover-text-color;
+    text-shadow: 0 1px 1px $button-hover-text-shadow-color;
+    border-color: $button-hover-border-color;
+    box-shadow: inset 0 0 1px 1px $button-hover-glow-color,
+      0 1px 0 0 $button-hover-gradient-end;
+  }
+
+  &:active {
+    /* "Pressed in" effect */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
+    padding: 6px 15px 4px; /* Nudge text down */
+  }
+
+  image {
+    -gtk-icon-size: 16px;
+  }
+}
+
+.wallpaper-nav-btn {
+  /* Font and Sizing */
+  font-family: Inter, sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  color: $button-text-color;
+  padding: 5px 25px;
+  margin: 5px;
+
+  /* Border and Shape */
+  border: 0px solid $button-border-color;
+  border-radius: 0px;
+
+  /* Background Gradient */
+  background: $button-gradient-end;
+
+  /* Inner and Outer Shadows for 3D Effect */
+  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+
+  /* Text Shadow */
+  text-shadow: 0 1px 1px $button-text-shadow-color;
+
+  &:hover {
+    /* Green/Yellowish glow on hover */
+    background: linear-gradient(to bottom, $button-hover-gradient-start, $button-hover-gradient-end);
+    color: $button-hover-text-color;
+    text-shadow: 0 1px 1px $button-hover-text-shadow-color;
+    border-color: $button-hover-border-color;
+    box-shadow: inset 0 0 1px 1px $button-hover-glow-color,
+      0 1px 0 0 $button-hover-gradient-end;
+  }
+
+  &:active {
+    /* "Pressed in" effect */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
+    padding: 6px 15px 4px; /* Nudge text down */
+  }
+
+  image {
+    -gtk-icon-size: 16px;
+  }
+}
+
+.wallpaper-grid-btn {
+  /* Font and Sizing */
+  font-family: Inter, sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  color: $button-text-color;
+  padding: 5px;
+  margin: 5px;
+
+  /* Border and Shape */
+  border: 0px solid $button-border-color;
+  border-radius: 0px;
+
+  /* Background Gradient */
+  background: $button-gradient-end;
+
+  /* Inner and Outer Shadows for 3D Effect */
+  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+
+  /* Text Shadow */
+  text-shadow: 0 1px 1px $button-text-shadow-color;
+
+  &:hover {
+    /* Green/Yellowish glow on hover */
+    background: linear-gradient(to bottom, $button-hover-gradient-start, $button-hover-gradient-end);
+    color: $button-hover-text-color;
+    text-shadow: 0 1px 1px $button-hover-text-shadow-color;
+    border-color: $button-hover-border-color;
+    box-shadow: inset 0 0 1px 1px $button-hover-glow-color,
+      0 1px 0 0 $button-hover-gradient-end;
+  }
+
+  &:active {
+    /* "Pressed in" effect */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
+    padding: 6px 5px 4px; /* Nudge content down */
+  }
+
+  picture {
+    border-radius: 0px;
+  }
+
+  label {
+    color: inherit;
+    font-size: 0.8rem;
+  }
+}
+
+.page-counter {
+  font-family: "Product Sans", "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  color: $button-text-color;
+  background: #{"@surface_container"};
+  padding: 8px 16px;
+  border-radius: 0px;
+  margin: 0 8px;
+}
+
+window[name="wallpaperpicker"] {
+  background: #{"@background"};
+  border: 0px solid #{"@on_surface"};
+  border-radius: 0px;
+  box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0,0,0,0.15);
 
   .directory {
     color: $button-text-color;
     font-size: 0.9rem;
     opacity: 0.8;
-  }
-
-  button {
-    background: linear-gradient(135deg, $button-gradient-start, $button-gradient-end);
-    border: 1px solid $button-border-color;
-    border-radius: 8px;
-    color: $button-text-color;
-    padding: 8px;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: linear-gradient(135deg, $button-hover-gradient-start, $button-hover-gradient-end);
-      border-color: $button-hover-border-color;
-      color: $button-hover-text-color;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    picture {
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    label {
-      color: inherit;
-      font-size: 0.8rem;
-    }
-  }
-
-  flowbox {
-    padding: 8px;
-
-    button {
-      margin: 4px;
-    }
-  }
-
-  scrolledwindow {
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   separator {
@@ -486,5 +682,82 @@ window[name="wallpaperpicker"] {
 
   label {
     color: $fg-color;
+  }
+
+  /* Header styling */
+  .wallpaper-header {
+    background: #{"@primary_container"};
+    box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
+    padding: 8px 12px;
+    margin: -15px -15px 15px -15px;
+    min-height: 40px;
+  }
+
+  .wallpaper-title {
+    font-family: "Product Sans", "Inter", sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    color: #{"@on_primary_container"};
+  }
+
+  .wallpaper-close-btn {
+    font-family: "SF Mono Nerd Font", "SFMono-Regular", monospace;
+    font-size: 10px;
+    background: #{"@red"};
+    border: 0px solid #{"@on_red"};
+    border-radius: 0px;
+    padding: 2px 4px;
+    margin: 0;
+    color: #{"@on_red"};
+    box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+    min-width: 20px;
+    min-height: 20px;
+    
+    &:hover {
+      background: #{"@red_container"};
+      color: #{"@on_red_container"};
+      box-shadow: 0.5px 0.5px 0 0.5px $shadow-color-transparent;
+    }
+    
+    &:active {
+      background: #{"@error"};
+      box-shadow: inset 0.5px 0.5px 0 $shadow-color-transparent;
+    }
+  }
+
+  .wallpaper-filename {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Scrolled window styling */
+  scrolledwindow {
+    background: transparent;
+    border: none;
+
+    scrollbar {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 0px;
+      min-width: 8px;
+      min-height: 8px;
+
+      slider {
+        background: #{"@primary"};
+        border-radius: 0px;
+        min-width: 6px;
+        min-height: 20px;
+        box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+
+        &:hover {
+          background: #{"@tertiary"};
+        }
+      }
+    }
+  }
+
+  /* FlowBox styling */
+  flowbox {
+    background: transparent;
+    padding: 8px;
   }
 }
