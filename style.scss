@@ -25,7 +25,7 @@ $button-hover-gradient-end: #{"@tertiary"};
 $button-hover-glow-color: #{"@on_tertiary_container"};
 
 // Shadow color for active state
-$shadow-color-transparent: rgba(0, 0, 0, 0.5);
+$shadow-color-transparent: rgba(20, 20, 20, 0.8);
 $shadow-color: $shadow-color-transparent;
 // Misc colors
 $error: red;
@@ -35,12 +35,12 @@ window#bar {
   color: $fg-color;
   font-weight: bold;
 
-  &:popover {
+  popover {
     /* Specific styles for popover buttons */
     padding: 11px 10px;
     margin: -1 5px;
     font-size: 13px;
-    border-radius: -1px;
+    border-radius: 0px;
     background: $button-gradient-start; /* Different gradient for popovers */
   }
 
@@ -132,27 +132,6 @@ window#bar {
   padding: 15px; /* More compact padding */
   margin: 10px;
   min-width: 350px; /* Smaller width */
-  position: relative;
-  overflow: hidden;
-  
-  /* Add a subtle inner glow */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 1;
-  }
-  
-  /* Ensure content is above the overlay */
-  > * {
-    position: relative;
-    z-index: 2;
-  }
 }
 
 .media-header {
@@ -160,17 +139,11 @@ window#bar {
   margin: -15px -15px 15px -15px; /* Adjusted for new padding */
   background: #{"@primary_container"};
   box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
-  
-  /* Flexbox for proper header layout */
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 
     .media-header-title {
       font-size: 14px; /* Smaller font */
       font-weight: bold;
       color: #{"@on_primary_container"};
-      flex-grow: 1;
     }
     
     .media-close-btn {
@@ -181,7 +154,6 @@ window#bar {
       margin: 0;
       color: #{"@on_red"};
       box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
-      flex-shrink: 0;
       min-width: 24px;
       min-height: 24px;
       
@@ -204,14 +176,12 @@ window#bar {
 
   .media-cover-section {
     margin-bottom: 15px; /* More compact spacing */
-    display: flex;
-    justify-content: center;
     
     .media-cover-image {
       border: 0px solid #{"@on_surface"};
       border-radius: 0px;
-      width: 250px; /* Requested size */
-      height: 250px; /* Square */
+      min-width: 250px; /* Requested size */
+      min-height: 250px; /* Square */
       background: transparent;
       /* GTK Image styling for square aspect */
 
@@ -219,14 +189,6 @@ window#bar {
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      
-      /* For actual image elements */
-      img {
-        width: 250px;
-        height: 250px;
-        object-fit: cover;
-        object-position: center;
-      }
     }
   }
 
@@ -270,20 +232,6 @@ window#bar {
         border-radius: 0px;
         min-height: 6px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        position: relative;
-        
-        &::after {
-          content: '';
-          position: absolute;
-          top: -2px;
-          left: 0;
-          right: 0;
-          bottom: -2px;
-          background: inherit;
-          filter: blur(4px);
-          opacity: 0.3;
-          z-index: -1;
-        }
       }
       
       slider {
@@ -315,10 +263,6 @@ window#bar {
   }
 
   .media-controls-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px; /* Smaller gap for compact design */
     
     .media-btn {
       background: #{"@surface_container"};
@@ -330,33 +274,13 @@ window#bar {
       min-width: 35px; /* Smaller buttons */
       min-height: 35px;
       transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
       
       /* Add subtle hover animation */
-      &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        background: rgba(255,255,255,0.1);
-        transition: all 0.3s ease;
-        transform: translate(-50%, -50%);
-        border-radius: 0px;
-      }
-      
       &:hover {
         background: #{"@primary"};
         color: #{"@on_primary"};
         box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
         transform: translateY(-1px);
-        
-        &::before {
-          width: 100%;
-          height: 100%;
-        }
       }
       
       &:active {
@@ -390,15 +314,11 @@ window#bar {
       /* Specifically ensure prev/next buttons are visible */
       &.media-btn-prev,
       &.media-btn-next {
-        opacity: 1 !important;
-        display: block !important;
-        visibility: visible !important;
+        opacity: 1;
       }
       
       image {
         -gtk-icon-size: 16px; /* Smaller icons */
-        position: relative;
-        z-index: 3;
       }
       
       &.media-btn-play image {

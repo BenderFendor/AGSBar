@@ -101,26 +101,14 @@ function cacheImage(
   }
 }
 
-function WallpaperPicker() {
-  console.log(`[WallpaperPicker] Initializing wallpaper picker`)
-  console.log(`[WallpaperPicker] Default wallpaper directory: ${WALLPAPER_DIR}`)
-  console.log(`[WallpaperPicker] Cache directory: ${cachePath}`)
+// Pre-load wallpapers function
+async function preloadWallpapers(path: string): Promise<string[]> {
+  console.log(`[WallpaperPicker] Pre-loading wallpapers from: ${path}`)
   
-  ensureDirectory(cachePath)
-  
-  const [wallpaperPath, setWallpaperPath] = createState(WALLPAPER_DIR)
-  const [wallpapers, setWallpapers] = createState<string[]>([])
-  const [isLoading, setIsLoading] = createState(true)
-
-  // Load wallpapers when path changes
-  const loadWallpapers = (path: string) => {
-    console.log(`[WallpaperPicker] Loading wallpapers from: ${path}`)
-    setIsLoading(true)
-    
-    // Use setTimeout to make it async and allow UI to update
+  return new Promise((resolve) => {
     setTimeout(() => {
       const wallpaperList = getWallpaperList(path)
-      console.log(`[WallpaperPicker] Retrieved ${wallpaperList.length} wallpapers`)
+      console.log(`[WallpaperPicker] Pre-loaded ${wallpaperList.length} wallpapers`)
       
       // Cache images that aren't already cached
       const wallpapersToCache = wallpaperList.filter(
@@ -133,19 +121,36 @@ function WallpaperPicker() {
         console.log(`[WallpaperPicker] Caching image: ${image}`)
         cacheImage(`${path}/${image}`, cachePath, 200)
       })
-
-      setWallpapers(wallpaperList)
-      setIsLoading(false)
-      console.log(`[WallpaperPicker] Finished loading wallpapers. Final count: ${wallpaperList.length}`)
-      console.log(`[WallpaperPicker] Wallpaper list:`, wallpaperList)
+      
+      console.log(`[WallpaperPicker] Pre-loading complete. Final count: ${wallpaperList.length}`)
+      resolve(wallpaperList)
     }, 100)
+  })
+}
+
+function WallpaperPicker(initialWallpapers: string[] = [], initialPath: string = WALLPAPER_DIR) {
+  console.log(`[WallpaperPicker] Initializing wallpaper picker with ${initialWallpapers.length} wallpapers`)
+  console.log(`[WallpaperPicker] Path: ${initialPath}`)
+  console.log(`[WallpaperPicker] Cache directory: ${cachePath}`)
+  
+  ensureDirectory(cachePath)
+  
+  const [wallpaperPath, setWallpaperPath] = createState(initialPath)
+  const [wallpapers, setWallpapers] = createState<string[]>(initialWallpapers)
+  const [isLoading, setIsLoading] = createState(false) // Start with false since we pre-loaded
+
+  // Load wallpapers when path changes
+  const loadWallpapers = async (path: string) => {
+    console.log(`[WallpaperPicker] Loading wallpapers from: ${path}`)
+    setIsLoading(true)
+    
+    const wallpaperList = await preloadWallpapers(path)
+    setWallpapers(wallpaperList)
+    setIsLoading(false)
+    console.log(`[WallpaperPicker] Finished loading wallpapers. Final count: ${wallpaperList.length}`)
   }
 
-  // Initial load
-  console.log(`[WallpaperPicker] Starting initial load for path: ${wallpaperPath.get()}`)
-  loadWallpapers(wallpaperPath.get())
-
-  return (
+  const wallpaperWindow = (
     <window
       name="wallpaperpicker"
       visible={false}
@@ -222,25 +227,28 @@ function WallpaperPicker() {
 
         <Gtk.Separator />
 
+        {/* Status */}
+        <label 
+          label={`Found ${wallpapers.get().length} wallpapers`}
+          halign={Gtk.Align.START}
+        />
+
         {/* Wallpaper grid */}
         <Gtk.ScrolledWindow vexpand>
-          <Gtk.FlowBox
-            selectionMode={Gtk.SelectionMode.NONE}
-            columnSpacing={8}
-            rowSpacing={8}
-            homogeneous
-          >
-            {isLoading((loading) => {
-              console.log(`[WallpaperPicker] Loading state: ${loading}`)
-              return loading
-            }) ? (
+          <box orientation={Gtk.Orientation.VERTICAL} spacing={8}>
+            {isLoading.get() ? (
               <label label="Loading wallpapers..." />
+            ) : wallpapers.get().length === 0 ? (
+              <label label="No wallpapers found in this directory" />
             ) : (
-              <For each={wallpapers}>
-                {(wallpaper) => {
-                  console.log(`[WallpaperPicker] Rendering wallpaper: ${wallpaper}`)
-                  return (
+              wallpapers.get().map((wallpaper, index) => {
+                console.log(`[WallpaperPicker] Creating button for wallpaper ${index}: ${wallpaper}`)
+                const cachePath_file = `${cachePath}/${wallpaper}`
+                return (
+                  <box orientation={Gtk.Orientation.HORIZONTAL} spacing={8}>
                     <button
+                      widthRequest={200}
+                      heightRequest={140}
                       onClicked={() => {
                         const fullPath = `${wallpaperPath.get()}/${wallpaper}`
                         console.log(`[WallpaperPicker] Setting wallpaper: ${fullPath}`)
@@ -264,33 +272,72 @@ function WallpaperPicker() {
                           widthRequest={180}
                           heightRequest={120}
                           contentFit={Gtk.ContentFit.COVER}
-                          file={Gio.file_new_for_path(`${cachePath}/${wallpaper}`)}
+                          file={Gio.file_new_for_path(cachePath_file)}
                         />
                         <label 
                           label={wallpaper} 
-                          maxWidthChars={20}
+                          maxWidthChars={25}
                           ellipsize={3} // PANGO_ELLIPSIZE_END
+                          halign={Gtk.Align.CENTER}
                         />
                       </box>
                     </button>
-                  )
-                }}
-              </For>
+                  </box>
+                )
+              })
             )}
-          </Gtk.FlowBox>
+          </box>
         </Gtk.ScrolledWindow>
       </box>
     </window>
   )
+  
+  return wallpaperWindow
 }
 
 export function toggleWallpaperPicker() {
+  console.log(`[WallpaperPicker] Toggle called`)
   const window = app.get_window("wallpaperpicker")
+  console.log(`[WallpaperPicker] Found window:`, window)
   if (window) {
+    console.log(`[WallpaperPicker] Toggling visibility. Current: ${window.visible}`)
     window.visible = !window.visible
   } else {
-    WallpaperPicker()
+    console.log(`[WallpaperPicker] Creating new wallpaper picker window with preloaded data`)
+    console.log(`[WallpaperPicker] Current preloaded count: ${preloadedWallpapers.length}`)
+    
+    // If wallpapers aren't preloaded yet, preload them first
+    if (preloadedWallpapers.length === 0 && !isPreloading) {
+      console.log(`[WallpaperPicker] No preloaded wallpapers, preloading now...`)
+      preloadWallpapersAsync().then((wallpapers) => {
+        console.log(`[WallpaperPicker] Preloading finished, creating window with ${wallpapers.length} wallpapers`)
+        WallpaperPicker(wallpapers, WALLPAPER_DIR)
+        const newWindow = app.get_window("wallpaperpicker")
+        if (newWindow) newWindow.visible = true
+      })
+    } else {
+      WallpaperPicker(preloadedWallpapers, WALLPAPER_DIR)
+      const newWindow = app.get_window("wallpaperpicker")
+      if (newWindow) newWindow.visible = true
+    }
   }
+}
+
+let preloadedWallpapers: string[] = []
+let isPreloading = false
+
+export async function preloadWallpapersAsync() {
+  if (isPreloading || preloadedWallpapers.length > 0) {
+    console.log("[WallpaperPicker] Already preloaded or preloading")
+    return preloadedWallpapers
+  }
+  
+  isPreloading = true
+  console.log("[WallpaperPicker] Starting background preload")
+  preloadedWallpapers = await preloadWallpapers(WALLPAPER_DIR)
+  isPreloading = false
+  console.log(`[WallpaperPicker] Background preload complete: ${preloadedWallpapers.length} wallpapers`)
+  return preloadedWallpapers
 }
 
 export default WallpaperPicker
