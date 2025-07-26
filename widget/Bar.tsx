@@ -19,72 +19,64 @@ import Hyprland from "gi://AstalHyprland"
 import Notifd from "gi://AstalNotifd"
 
 function Mpris() {
-  const mpris = AstalMpris.get_default()
-  const apps = new AstalApps.Apps()
-  const players = createBinding(mpris, "players")
+  const mpris = AstalMpris.get_default();
+  const apps = new AstalApps.Apps();
+  const players = createBinding(mpris, "players");
+
+  // Helper function to get artist and title
+  function getArtistAndTitle(player) {
+    return createBinding(player, "artist")((artist) => {
+      const title = player.title;
+      return artist ? `${artist} - ${title}` : title;
+    });
+  }
 
   return (
     <menubutton>
       <box>
+        {/* Display current player's artist and title */}
         <For each={players}>
           {(player) => {
-            const [app] = apps.exact_query(player.entry)
-            // Fixed: Check if 'app' exists before trying to access its properties
-            // to prevent a crash if no matching app is found.
-            return <image visible={!!app} iconName={app?.iconName} />
+            const [app] = apps.exact_query(player.entry);
+            // Ensure 'app' exists to prevent crashes if no matching app is found.
+            return <label label={getArtistAndTitle(player)} visible={!!app} />;
           }}
         </For>
       </box>
-      <popover>
+
+      {/* Popover for media controls */}
+      <popover class="mpris-popover">
         <box spacing={4} orientation={Gtk.Orientation.VERTICAL}>
           <For each={players}>
             {(player) => (
               <box spacing={4} widthRequest={200}>
-                <box overflow={Gtk.Overflow.HIDDEN} css="border-radius: 8px;">
-                  <image
-                    pixelSize={64}
-                    file={createBinding(player, "coverArt")}
-                  />
+                {/* Cover art */}
+                <box overflow={Gtk.Overflow.HIDDEN} class="cover-art">
+                  <image pixelSize={400} file={createBinding(player, "coverArt")} />
                 </box>
-                <box
-                  valign={Gtk.Align.CENTER}
-                  orientation={Gtk.Orientation.VERTICAL}
-                >
+
+                {/* Media details and controls */}
+                <box valign={Gtk.Align.CENTER} orientation={Gtk.Orientation.VERTICAL}>
                   <label xalign={0} label={createBinding(player, "title")} />
                   <label xalign={0} label={createBinding(player, "artist")} />
-                </box>
-                <box hexpand halign={Gtk.Align.END}>
-                  <button
-                    onClicked={() => player.previous()}
-                    visible={createBinding(player, "canGoPrevious")}
-                  >
+
+                  {/* Previous button */}
+                  <button onClicked={() => player.previous()} visible={createBinding(player, "canGoPrevious")}>
                     <image iconName="media-seek-backward-symbolic" />
                   </button>
-                  <button
-                    onClicked={() => player.play_pause()}
-                    visible={createBinding(player, "canControl")}
-                  >
+
+                  {/* Play/Pause button */}
+                  <button onClicked={() => player.play_pause()} visible={createBinding(player, "canControl")}>
                     <box>
                       <image
                         iconName="media-playback-start-symbolic"
-                        visible={createBinding(
-                          player,
-                          "playbackStatus",
-                        )((s) => s === AstalMpris.PlaybackStatus.PLAYING)}
-                      />
-                      <image
-                        iconName="media-playback-pause-symbolic"
-                        visible={createBinding(
-                          player,
-                          "playbackStatus",
-                        )((s) => s !== AstalMpris.PlaybackStatus.PLAYING)}
+                        visible={createBinding(player, "playbackStatus")((s) => s === AstalMpris.PlaybackStatus.PLAYING)}
                       />
                     </box>
                   </button>
-                  <button
-                    onClicked={() => player.next()}
-                    visible={createBinding(player, "canGoNext")}
-                  >
+
+                  {/* Next button */}
+                  <button onClicked={() => player.next()} visible={createBinding(player, "canGoNext")}>
                     <image iconName="media-seek-forward-symbolic" />
                   </button>
                 </box>
@@ -94,7 +86,7 @@ function Mpris() {
         </box>
       </popover>
     </menubutton>
-  )
+  );
 }
 
 // --- WORKSPACES IMPLEMENTATION ---
@@ -294,6 +286,7 @@ export default function Bar(gdkmonitor) {
           <Workspaces />
         </box>
         <box $type="center">
+          <Mpris />
         </box>
         <box $type="end">
           <Tray />

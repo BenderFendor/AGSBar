@@ -17,12 +17,12 @@ $button-text-shadow-color: #{"@on_primary_fixed"};
 
 // Button colors (Hover State)
 $active-workspace: #{"@surface_tint"};
-$button-hover-text-color: #{"@on_yellow"};
+$button-hover-text-color: #{"@on_tertiary_container"};
 $button-hover-text-shadow-color: #{"@white_value"};
-$button-hover-border-color: #{"@yellow"};
-$button-hover-gradient-start: #{"@on_yellow_container"};
-$button-hover-gradient-end: #{"@yellow"};
-$button-hover-glow-color: #{"@on_yellow_container"};
+$button-hover-border-color: #{"@tertiary"};
+$button-hover-gradient-start: #{"@on_tertiary_container"};
+$button-hover-gradient-end: #{"@tertiary"};
+$button-hover-glow-color: #{"@on_tertiary_container"};
 
 // Shadow color for active state
 $shadow-color: #{"@shadow"};
@@ -35,9 +35,40 @@ window#bar {
   color: $fg-color;
   font-weight: bold;
 
+  &:popover {
+    /* Specific styles for popover buttons */
+    padding: 11px 10px;
+    margin: -1 5px;
+    font-size: 13px;
+    border-radius: -1px;
+    background: $button-gradient-start; /* Different gradient for popovers */
+  }
+
+  &.mpris-popover
+  {
+    /* Specific styles for MPRIS popover buttons */
+    padding: 11px 10px;
+    margin: -1 5px;
+    font-size: 13px;
+    border-radius: -1px;
+    background: $button-gradient-start; /* Different gradient for MPRIS */
+  }
+
+  &.cover-art
+  {
+    /* Specific styles for cover art buttons */
+    padding: 4px 15px;
+    margin: -1 5px;
+    font-size: 13px;
+    background: $button-gradient-start; /* Different gradient for cover art */
+  }
+
+
+
+
   > box {
     background: transparent;
-    border-radius: 10px;
+    border-radius: 0px;
     margin: 10px;
     padding: 10px;
   }

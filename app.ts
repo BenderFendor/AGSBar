@@ -8,7 +8,7 @@ app.apply_css("./colors.css")
 
 app.start({
   css: style,
-  gtkTheme: "ada-gtk3",
+  gtkTheme: "adw-gtk3",
   main() {
     app.get_monitors().map(Bar)
     NotificationPopups()
