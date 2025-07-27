@@ -53,12 +53,17 @@ function getDisplayName(path: string): string {
 
 function isImageFile(path: string): boolean {
   const ext = path.split('.').pop()?.toLowerCase()
-  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff'].includes(ext || '')
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff', 'tif', 'ico', 'xpm'].includes(ext || '')
 }
 
 function isVideoFile(path: string): boolean {
   const ext = path.split('.').pop()?.toLowerCase()
-  return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'].includes(ext || '')
+  return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp', 'ogv', 'mpg', 'mpeg'].includes(ext || '')
+}
+
+function isPdfFile(path: string): boolean {
+  const ext = path.split('.').pop()?.toLowerCase()
+  return ext === 'pdf'
 }
 
 function createAsyncImagePreview(path: string): Gtk.Widget {
@@ -66,14 +71,113 @@ function createAsyncImagePreview(path: string): Gtk.Widget {
   image.set_from_icon_name("image-loading")
   image.set_icon_size(Gtk.IconSize.LARGE)
   
-  // Load image asynchronously with a small delay to avoid blocking
+  // Load image directly without Tumbler dependency
   GLib.timeout_add(GLib.PRIORITY_LOW, 10, () => {
     try {
-      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 400, 400, true)
-      image.set_from_pixbuf(pixbuf)
-      image.set_size_request(400, 400)
+      // Generate thumbnail path using FreeDesktop specification
+      const fileUri = `file://${path}`
+      const hash = GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, fileUri, -1)
+      const thumbDir = GLib.get_user_cache_dir() + '/thumbnails/large'
+      const thumbPath = `${thumbDir}/${hash}.png`
+      
+      // Check if cached thumbnail already exists
+      if (GLib.file_test(thumbPath, GLib.FileTest.EXISTS)) {
+        try {
+          const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 400, 400, true)
+          image.set_from_pixbuf(pixbuf)
+          image.set_size_request(400, 400)
+          return false
+        } catch (error) {
+          console.warn(`Failed to load cached thumbnail: ${error}`)
+        }
+      }
+      
+      // Create thumbnail cache directory if it doesn't exist
+      GLib.mkdir_with_parents(thumbDir, 0o755)
+      
+      // Try to request thumbnail via D-Bus (Thunar/system thumbnails)
+      try {
+        const bus = Gio.bus_get_sync(Gio.BusType.SESSION, null)
+        if (bus) {
+          console.log(`Requesting D-Bus thumbnail for image: ${fileUri}`)
+          // Correct D-Bus call signature: (asasssu)
+          const variant = GLib.Variant.new('(asasssu)', [
+            [fileUri],         // uris (array of strings)
+            ['image/jpeg'],    // mime_types (array of strings) - generic image type
+            'large',           // flavor (string)
+            'default',         // scheduler (string)
+            0                  // handle_to_unqueue (uint32)
+          ])
+          
+          bus.call(
+            'org.freedesktop.thumbnails.Thumbnailer1',
+            '/org/freedesktop/thumbnails/Thumbnailer1',
+            'org.freedesktop.thumbnails.Thumbnailer1',
+            'Queue',
+            variant,
+            null,
+            Gio.DBusCallFlags.NO_AUTO_START,
+            -1,
+            null,
+            null
+          )
+          
+          // Poll for D-Bus generated thumbnail
+          let attempts = 0
+          const maxAttempts = 50 // 5 seconds
+          
+          const checkThumbnail = () => {
+            attempts++
+            if (GLib.file_test(thumbPath, GLib.FileTest.EXISTS)) {
+              try {
+                const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 400, 400, true)
+                image.set_from_pixbuf(pixbuf)
+                image.set_size_request(400, 400)
+              } catch (error) {
+                console.warn(`Failed to load D-Bus thumbnail: ${error}`)
+                image.set_from_icon_name("image-x-generic")
+                image.set_icon_size(Gtk.IconSize.LARGE)
+              }
+              return false // Stop polling
+            } else if (attempts >= maxAttempts) {
+              // Timeout - fallback to generic icon
+              image.set_from_icon_name("image-x-generic")
+              image.set_icon_size(Gtk.IconSize.LARGE)
+              return false
+            }
+            return true // Continue polling
+          }
+          
+          GLib.timeout_add(GLib.PRIORITY_LOW, 100, checkThumbnail)
+        } else {
+          image.set_from_icon_name("image-x-generic")
+          image.set_icon_size(Gtk.IconSize.LARGE)
+        }
+      } catch (dbusError) {
+        console.warn(`D-Bus thumbnailing failed: ${dbusError}`)
+        image.set_from_icon_name("image-x-generic")
+        image.set_icon_size(Gtk.IconSize.LARGE)
+      }
+      
+      // COMMENTED OUT: Direct pixbuf loading for testing
+      // try {
+      //   const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 400, 400, true)
+      //   image.set_from_pixbuf(pixbuf)
+      //   image.set_size_request(400, 400)
+      //   
+      //   // Save thumbnail to cache for future use
+      //   try {
+      //     pixbuf.savev(thumbPath, 'png', [], [])
+      //   } catch (saveError) {
+      //     console.warn(`Failed to save thumbnail cache: ${saveError}`)
+      //   }
+      // } catch (error) {
+      //   console.warn(`Failed to load image preview for ${path}:`, error)
+      //   image.set_from_icon_name("image-x-generic")
+      //   image.set_icon_size(Gtk.IconSize.LARGE)
+      // }
     } catch (error) {
-      // Fallback to generic image icon if preview fails
+      console.warn(`Image preview failed for ${path}:`, error)
       image.set_from_icon_name("image-x-generic")
       image.set_icon_size(Gtk.IconSize.LARGE)
     }
@@ -88,30 +192,156 @@ function createAsyncVideoThumbnail(path: string): Gtk.Widget {
   image.set_from_icon_name("video-x-generic")
   image.set_icon_size(Gtk.IconSize.LARGE)
   
-  // Load video thumbnail asynchronously
-  GLib.timeout_add(GLib.PRIORITY_LOW, 50, () => {
+  // Load video thumbnail using D-Bus or fallback to FFmpeg
+  GLib.timeout_add(GLib.PRIORITY_LOW, 10, () => {
     try {
-      // Create temporary file for thumbnail
-      const tempFile = `/tmp/thumb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`
+      // Generate thumbnail path using FreeDesktop specification
+      const fileUri = `file://${path}`
+      const hash = GLib.compute_checksum_for_string(GLib.ChecksumType.MD5, fileUri, -1)
+      const thumbDir = GLib.get_user_cache_dir() + '/thumbnails/large'
+      const thumbPath = `${thumbDir}/${hash}.png`
       
-      // Extract frame at 5 seconds (or beginning if video is shorter)
-      const cmd = `ffmpeg -i "${path}" -ss 5 -vframes 1 -f image2 -s 400x400 "${tempFile}" -y 2>/dev/null`
+      // Check if cached thumbnail already exists
+      if (GLib.file_test(thumbPath, GLib.FileTest.EXISTS)) {
+        try {
+          const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 400, 400, true)
+          image.set_from_pixbuf(pixbuf)
+          image.set_size_request(400, 400)
+          return false
+        } catch (error) {
+          console.warn(`Failed to load cached thumbnail: ${error}`)
+        }
+      }
       
-      const [success] = GLib.spawn_command_line_sync(cmd)
-      if (success && GLib.file_test(tempFile, GLib.FileTest.EXISTS)) {
-        const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(tempFile, 400, 400, true)
-        image.set_from_pixbuf(pixbuf)
-        image.set_size_request(400, 400)
-        
-        // Clean up temp file
-        GLib.unlink(tempFile)
-      } else {
-        // Fallback if ffmpeg fails
+      // Create thumbnail cache directory
+      GLib.mkdir_with_parents(thumbDir, 0o755)
+      
+      // Try D-Bus thumbnailing (supports both images and videos)
+      try {
+        const bus = Gio.bus_get_sync(Gio.BusType.SESSION, null)
+        if (bus) {
+          console.log(`Requesting D-Bus thumbnail for video: ${fileUri}`)
+          // Correct D-Bus call signature: (asasssu)
+          const variant = GLib.Variant.new('(asasssu)', [
+            [fileUri],      // uris (array of strings)
+            ['video/mp4'],  // mime_types (array of strings) - we'll use generic video/mp4
+            'large',        // flavor (string)
+            'default',      // scheduler (string)
+            0               // handle_to_unqueue (uint32)
+          ])
+          
+          // Try the call and log any errors
+          try {
+            bus.call(
+              'org.freedesktop.thumbnails.Thumbnailer1',
+              '/org/freedesktop/thumbnails/Thumbnailer1',
+              'org.freedesktop.thumbnails.Thumbnailer1',
+              'Queue',
+              variant,
+              null,
+              Gio.DBusCallFlags.NONE, // Changed from NO_AUTO_START to allow service activation
+              5000, // 5 second timeout
+              null,
+              null
+            )
+            console.log(`D-Bus thumbnail request sent for: ${fileUri}`)
+          } catch (callError) {
+            console.warn(`D-Bus call failed: ${callError}`)
+            
+            // Try alternative: use tumbler directly if available
+            try {
+              console.log(`Trying tumbler command fallback for: ${path}`)
+              const tumblerCmd = `tumbler "${path}"`
+              GLib.spawn_command_line_async(tumblerCmd)
+            } catch (tumblerError) {
+              console.warn(`Tumbler command also failed: ${tumblerError}`)
+            }
+          }
+          
+          // Poll for D-Bus generated thumbnail
+          let attempts = 0
+          const maxAttempts = 50 // 5 seconds
+          
+          const checkThumbnail = () => {
+            attempts++
+            if (GLib.file_test(thumbPath, GLib.FileTest.EXISTS)) {
+              console.log(`Found thumbnail for video: ${thumbPath}`)
+              try {
+                const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(thumbPath, 400, 400, true)
+                image.set_from_pixbuf(pixbuf)
+                image.set_size_request(400, 400)
+              } catch (error) {
+                console.warn(`Failed to load D-Bus thumbnail: ${error}`)
+                image.set_from_icon_name("video-x-generic")
+                image.set_icon_size(Gtk.IconSize.LARGE)
+              }
+              return false // Stop polling
+            } else if (attempts >= maxAttempts) {
+              console.warn(`Timeout waiting for video thumbnail: ${thumbPath}`)
+              // Timeout - show generic icon (no FFmpeg fallback for testing)
+              image.set_from_icon_name("video-x-generic")
+              image.set_icon_size(Gtk.IconSize.LARGE)
+              return false
+            }
+            return true // Continue polling
+          }
+          
+          GLib.timeout_add(GLib.PRIORITY_LOW, 100, checkThumbnail)
+        } else {
+          console.warn("Failed to get D-Bus session bus")
+          image.set_from_icon_name("video-x-generic")
+          image.set_icon_size(Gtk.IconSize.LARGE)
+        }
+      } catch (dbusError) {
+        console.warn(`D-Bus thumbnailing failed: ${dbusError}`)
         image.set_from_icon_name("video-x-generic")
         image.set_icon_size(Gtk.IconSize.LARGE)
       }
+      
+      // COMMENTED OUT: FFmpeg fallback for testing
+      // function fallbackToFFmpeg() {
+      //   const tempFile = `/tmp/video_thumb_${Date.now()}.png`
+      //   const cmd = `ffmpeg -i "${path}" -ss 00:00:01.000 -vframes 1 -y "${tempFile}" 2>/dev/null`
+      //   
+      //   try {
+      //     const [success] = GLib.spawn_command_line_sync(cmd)
+      //     if (success && GLib.file_test(tempFile, GLib.FileTest.EXISTS)) {
+      //       try {
+      //         const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(tempFile, 400, 400, true)
+      //         image.set_from_pixbuf(pixbuf)
+      //         image.set_size_request(400, 400)
+      //         
+      //         // Copy to cache
+      //         try {
+      //           pixbuf.savev(thumbPath, 'png', [], [])
+      //         } catch (saveError) {
+      //           console.warn(`Failed to save FFmpeg thumbnail: ${saveError}`)
+      //         }
+      //       } catch (loadError) {
+      //         console.warn(`Failed to load FFmpeg thumbnail: ${loadError}`)
+      //         image.set_from_icon_name("video-x-generic")
+      //         image.set_icon_size(Gtk.IconSize.LARGE)
+      //       }
+      //       
+      //       // Clean up temp file
+      //       try {
+      //         GLib.unlink(tempFile)
+      //       } catch (unlinkError) {
+      //         console.warn(`Failed to cleanup temp file: ${unlinkError}`)
+      //       }
+      //     } else {
+      //       image.set_from_icon_name("video-x-generic")
+      //       image.set_icon_size(Gtk.IconSize.LARGE)
+      //     }
+      //   } catch (ffmpegError) {
+      //     console.warn(`FFmpeg thumbnail generation failed: ${ffmpegError}`)
+      //     image.set_from_icon_name("video-x-generic")
+      //     image.set_icon_size(Gtk.IconSize.LARGE)
+      //   }
+      // }
+      
     } catch (error) {
-      console.warn(`Failed to load video thumbnail for ${path}:`, error)
+      console.warn(`Video thumbnail generation failed for ${path}:`, error)
       image.set_from_icon_name("video-x-generic")
       image.set_icon_size(Gtk.IconSize.LARGE)
     }
@@ -124,8 +354,8 @@ function createAsyncVideoThumbnail(path: string): Gtk.Widget {
 function createAsyncPreview(path: string): Gtk.Widget {
   if (isImageFile(path)) {
     return createAsyncImagePreview(path)
-  } else if (isVideoFile(path)) {
-    return createAsyncVideoThumbnail(path)
+  } else if (isVideoFile(path) || isPdfFile(path)) {
+    return createAsyncVideoThumbnail(path) // Use same function for videos and PDFs
   } else {
     const image = new Gtk.Image()
     image.set_from_icon_name(getFileIcon(path))
@@ -542,7 +772,7 @@ export default function Applauncher() {
                 >
                   <box spacing={10} cssClasses={['result-item']}>
                     <box cssClasses={['icon-container']}>
-                      {result.type === 'file' && result.path && (isImageFile(result.path) || isVideoFile(result.path)) ? (
+                      {result.type === 'file' && result.path && (isImageFile(result.path) || isVideoFile(result.path) || isPdfFile(result.path)) ? (
                         createAsyncPreview(result.path)
                       ) : (
                         <image iconName={result.icon} iconSize={Gtk.IconSize.LARGE} />

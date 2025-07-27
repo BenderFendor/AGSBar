@@ -3125,3 +3125,58 @@ end
    meson setup build
    meson install -C build
    ```
+
+
+   1. Introduction to Tumbler
+
+    What it is: Tumbler is a D-Bus thumbnailing service primarily used in the Xfce desktop environment.
+    Purpose: It generates thumbnail images for various file types (like images, videos, documents) and stores them in a cache for faster access.
+    How it works: Tumbler implements the thumbnail management D-Bus specification, allowing applications to request and receive thumbnails without directly handling the generation process itself.
+
+2. D-Bus interaction
+
+    D-Bus Service: Tumbler exposes a D-Bus service for applications to communicate with.
+    D-Bus Interface: The primary interface for requesting thumbnails is org.freedesktop.thumbnails.Thumbnailer1.
+    Object Path: The object path used to access this interface is /org/freedesktop/thumbnails/Thumbnailer1.
+    Methods: Key methods include:
+        Queue: Used to request the creation of thumbnails for one or more files.
+        Dequeue: Used to cancel a pending thumbnail request.
+        GetSupported: Returns a list of URI schemes and MIME types that Tumbler can handle.
+        GetFlavors: Returns a list of supported thumbnail sizes (e.g., "normal", "large").
+        GetSchedulers: Returns a list of available scheduling options for thumbnail generation.
+    Signals: Tumbler emits signals to notify applications about the status of thumbnailing operations.
+        Ready: Indicates that one or more thumbnails have been successfully generated.
+        Started: Signals that a queued request has begun processing.
+        Finished: Indicates that a queued request has completed (regardless of success or failure).
+        Error: Emitted when an error occurs during thumbnail generation for specific files.
+
+3. Thumbnail requests and handling
+
+    Requesting Thumbnails: To request a thumbnail, your application needs to:
+        Connect to the D-Bus session bus.
+        Obtain a D-Bus proxy object for the Tumbler service at the specified object path and interface.
+        Call the Queue method with the file URIs, MIME types, and desired thumbnail "flavor" (size).
+    Thumbnail Cache: Tumbler stores thumbnails in a cache, typically located at $XDG_CACHE_HOME/thumbnails.
+        $XDG_CACHE_HOME usually defaults to ~/.cache.
+    Thumbnail Naming Convention: Thumbnails are named using the MD5 checksum of the file's URI and the .png extension, followed by the thumbnail size (e.g., md5sum.png). The Thumbnail Managing Standard provides details on this.
+    Accessing Thumbnails: After receiving the Ready signal, your application can reconstruct the thumbnail's path based on the file URI and the thumbnail naming convention to load and display the thumbnail image.
+
+4. Configuration and plugins
+
+    tumbler.rc: Tumbler's behavior can be customized using the tumbler.rc configuration file.
+        The default file is located at /etc/xdg/tumbler/tumbler.rc.
+        Users can override the default by copying it to ~/.config/tumbler/tumbler.rc.
+    Plugin Settings: The tumbler.rc file allows configuring individual thumbnailer plugins.
+        Disabled: Enable or disable a specific plugin (true/false).
+        Priority: Sets the priority for a plugin if multiple plugins can handle the same file type.
+        Locations: Specifies the directory paths where the plugin should be active.
+        Excludes: Defines paths where the plugin should not be used.
+        MaxFileSize: Sets the maximum file size for which the plugin will generate thumbnails.
+    Specialized Thumbnailers: Tumbler can also use external specialized thumbnailer services, registered at runtime, to handle specific URI schemes and MIME types.
+
+5. Potential challenges
+
+    High CPU Usage: tumblerd (the Tumbler daemon) can sometimes consume significant CPU, especially with large or frequently changing files.
+        Possible solutions: Closing file managers, disabling specific plugins in tumbler.rc, or using a script to monitor and manage tumblerd.
+    D-Bus Binding Libraries: Interacting with Tumbler requires using a D-Bus binding library for your chosen programming language, such as dbus-python or dbus-next.
+    Error Handling: Robust applications should handle potential D-Bus errors and signals to ensure proper operation and user feedback.
