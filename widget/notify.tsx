@@ -6,8 +6,10 @@ import AstalNotifd from "gi://AstalNotifd"
 import Pango from "gi://Pango"
 
 function isIcon(icon?: string | null) {
-  const iconTheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default()!)
-  return icon && iconTheme.has_icon(icon)
+  const display = Gdk.Display.get_default()
+  if (!display || !icon) return false
+  const iconTheme = Gtk.IconTheme.get_for_display(display)
+  return iconTheme.has_icon(icon)
 }
 
 function fileExists(path: string) {
@@ -15,7 +17,15 @@ function fileExists(path: string) {
 }
 
 function time(time: number, format = "%H:%M") {
-  return GLib.DateTime.new_from_unix_local(time).format(format)!
+  if (typeof time !== 'number' || isNaN(time)) {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  try {
+    return GLib.DateTime.new_from_unix_local(time).format(format)!
+  } catch (error) {
+    console.warn("Error formatting time:", error)
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
 }
 
 function urgency(n: AstalNotifd.Notification) {
@@ -38,47 +48,91 @@ export default function Notification({
   notification: AstalNotifd.Notification
   onHoverLost: () => void
 }) {
+  // Ensure notification object is valid and has required properties
+  if (!n || typeof n !== 'object') {
+    console.warn("Invalid notification object:", n)
+    return <box />
+  }
+
+  // Safely access notification properties with fallbacks
+  const safeNotification = {
+    id: n.id ?? 0,
+    appName: n.appName ?? "Unknown",
+    appIcon: n.appIcon ?? null,
+    desktopEntry: n.desktopEntry ?? null,
+    summary: n.summary ?? "",
+    body: n.body ?? "",
+    image: n.image ?? null,
+    urgency: n.urgency ?? AstalNotifd.Urgency.NORMAL,
+    time: n.time ?? Date.now() / 1000,
+    actions: n.actions ?? [],
+    dismiss: () => {
+      try {
+        n.dismiss?.()
+      } catch (error) {
+        console.warn("Failed to dismiss notification:", error)
+      }
+    },
+    invoke: (id: string) => {
+      try {
+        n.invoke?.(id)
+      } catch (error) {
+        console.warn("Failed to invoke notification action:", error)
+      }
+    }
+  }
+
   return (
     <Adw.Clamp maximumSize={400}>
       <box
         widthRequest={400}
-        class={`Notification ${urgency(n)}`}
+        class={`Notification ${urgency(safeNotification)}`}
         orientation={Gtk.Orientation.VERTICAL}
       >
-        <Gtk.EventControllerMotion onLeave={onHoverLost} />
         <box class="header">
-          {(n.appIcon || isIcon(n.desktopEntry)) && (
+          {(safeNotification.appIcon || isIcon(safeNotification.desktopEntry)) && (
             <image
               class="app-icon"
-              visible={Boolean(n.appIcon || n.desktopEntry)}
-              iconName={n.appIcon || n.desktopEntry}
+              visible={Boolean(safeNotification.appIcon || safeNotification.desktopEntry)}
+              iconName={safeNotification.appIcon || safeNotification.desktopEntry || "application-x-executable"}
             />
           )}
           <label
             class="app-name"
             halign={Gtk.Align.START}
             ellipsize={Pango.EllipsizeMode.END}
-            label={n.appName || "Unknown"}
+            label={safeNotification.appName || "Unknown"}
           />
           <label
             class="time"
             hexpand
             halign={Gtk.Align.END}
-            label={time(n.time)}
+            label={time(safeNotification.time) || ""}
           />
-          <button onClicked={() => n.dismiss()}>
+          <button onClicked={safeNotification.dismiss}>
             <image iconName="window-close-symbolic" />
           </button>
         </box>
         <Gtk.Separator visible />
         <box class="content">
-          {n.image && fileExists(n.image) && (
-            <image valign={Gtk.Align.START} class="image" file={n.image} />
+          {safeNotification.image && 
+           typeof safeNotification.image === 'string' && 
+           safeNotification.image.length > 0 && 
+           fileExists(safeNotification.image) && (
+            <image 
+              valign={Gtk.Align.START} 
+              class="image" 
+              file={safeNotification.image}
+            />
           )}
-          {n.image && isIcon(n.image) && (
+          {safeNotification.image && 
+           typeof safeNotification.image === 'string' && 
+           safeNotification.image.length > 0 && 
+           !fileExists(safeNotification.image) && 
+           isIcon(safeNotification.image) && (
             <box valign={Gtk.Align.START} class="icon-image">
               <image
-                iconName={n.image}
+                iconName={safeNotification.image}
                 halign={Gtk.Align.CENTER}
                 valign={Gtk.Align.CENTER}
               />
@@ -89,10 +143,10 @@ export default function Notification({
               class="summary"
               halign={Gtk.Align.START}
               xalign={0}
-              label={n.summary}
+              label={safeNotification.summary}
               ellipsize={Pango.EllipsizeMode.END}
             />
-            {n.body && (
+            {safeNotification.body && (
               <label
                 class="body"
                 wrap
@@ -100,16 +154,25 @@ export default function Notification({
                 halign={Gtk.Align.START}
                 xalign={0}
                 justify={Gtk.Justification.FILL}
-                label={n.body}
+                label={safeNotification.body}
               />
             )}
           </box>
         </box>
-        {n.actions.length > 0 && (
+        {Array.isArray(safeNotification.actions) && safeNotification.actions.length > 0 && (
           <box class="actions">
-            {n.actions.map(({ label, id }) => (
-              <button hexpand onClicked={() => n.invoke(id)}>
-                <label label={label} halign={Gtk.Align.CENTER} hexpand />
+            {safeNotification.actions.map(({ label, id }: { label: string; id: string }) => (
+              <button 
+                hexpand 
+                onClicked={() => {
+                  try {
+                    safeNotification.invoke(id)
+                  } catch (error) {
+                    console.warn("Error invoking notification action:", error)
+                  }
+                }}
+              >
+                <label label={label || "Action"} halign={Gtk.Align.CENTER} hexpand />
               </button>
             ))}
           </box>
