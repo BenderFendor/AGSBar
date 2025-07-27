@@ -4,6 +4,7 @@ import AstalApps from "gi://AstalApps"
 import Graphene from "gi://Graphene"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
+import GdkPixbuf from "gi://GdkPixbuf"
 
 const { TOP, BOTTOM, LEFT, RIGHT } = Astal.WindowAnchor
 
@@ -48,6 +49,89 @@ function getDisplayName(path: string): string {
   const displayDir = dir.replace(homeDir, '~')
   
   return `${name} (${displayDir})`
+}
+
+function isImageFile(path: string): boolean {
+  const ext = path.split('.').pop()?.toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'tiff'].includes(ext || '')
+}
+
+function isVideoFile(path: string): boolean {
+  const ext = path.split('.').pop()?.toLowerCase()
+  return ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'].includes(ext || '')
+}
+
+function createAsyncImagePreview(path: string): Gtk.Widget {
+  const image = new Gtk.Image()
+  image.set_from_icon_name("image-loading")
+  image.set_icon_size(Gtk.IconSize.LARGE)
+  
+  // Load image asynchronously with a small delay to avoid blocking
+  GLib.timeout_add(GLib.PRIORITY_LOW, 10, () => {
+    try {
+      const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 400, 400, true)
+      image.set_from_pixbuf(pixbuf)
+      image.set_size_request(400, 400)
+    } catch (error) {
+      // Fallback to generic image icon if preview fails
+      image.set_from_icon_name("image-x-generic")
+      image.set_icon_size(Gtk.IconSize.LARGE)
+    }
+    return false // Don't repeat
+  })
+  
+  return image
+}
+
+function createAsyncVideoThumbnail(path: string): Gtk.Widget {
+  const image = new Gtk.Image()
+  image.set_from_icon_name("video-x-generic")
+  image.set_icon_size(Gtk.IconSize.LARGE)
+  
+  // Load video thumbnail asynchronously
+  GLib.timeout_add(GLib.PRIORITY_LOW, 50, () => {
+    try {
+      // Create temporary file for thumbnail
+      const tempFile = `/tmp/thumb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`
+      
+      // Extract frame at 5 seconds (or beginning if video is shorter)
+      const cmd = `ffmpeg -i "${path}" -ss 5 -vframes 1 -f image2 -s 400x400 "${tempFile}" -y 2>/dev/null`
+      
+      const [success] = GLib.spawn_command_line_sync(cmd)
+      if (success && GLib.file_test(tempFile, GLib.FileTest.EXISTS)) {
+        const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(tempFile, 400, 400, true)
+        image.set_from_pixbuf(pixbuf)
+        image.set_size_request(400, 400)
+        
+        // Clean up temp file
+        GLib.unlink(tempFile)
+      } else {
+        // Fallback if ffmpeg fails
+        image.set_from_icon_name("video-x-generic")
+        image.set_icon_size(Gtk.IconSize.LARGE)
+      }
+    } catch (error) {
+      console.warn(`Failed to load video thumbnail for ${path}:`, error)
+      image.set_from_icon_name("video-x-generic")
+      image.set_icon_size(Gtk.IconSize.LARGE)
+    }
+    return false
+  })
+  
+  return image
+}
+
+function createAsyncPreview(path: string): Gtk.Widget {
+  if (isImageFile(path)) {
+    return createAsyncImagePreview(path)
+  } else if (isVideoFile(path)) {
+    return createAsyncVideoThumbnail(path)
+  } else {
+    const image = new Gtk.Image()
+    image.set_from_icon_name(getFileIcon(path))
+    image.set_icon_size(Gtk.IconSize.LARGE)
+    return image
+  }
 }
 
 function loadRecentApps(): AstalApps.Application[] {
@@ -107,9 +191,41 @@ export default function Applauncher() {
   const apps = new AstalApps.Apps()
   const [list, setList] = createState(new Array<SearchResult>())
   const [selectedIndex, setSelectedIndex] = createState(0)
-  const [windowWidth, setWindowWidth] = createState(450)
+  const [windowWidth, setWindowWidth] = createState(800)
+  const [visibleStartIndex, setVisibleStartIndex] = createState(0)
+  const [fileSearchOffset, setFileSearchOffset] = createState(0)
+  const [isLoadingMore, setIsLoadingMore] = createState(false)
+  const [hasMoreFiles, setHasMoreFiles] = createState(true)
 
   let currentSearchAbort: (() => void) | null = null
+  let scrolledWindow: Gtk.ScrolledWindow
+  let currentSearchTerm = ""
+
+  // Track scroll position to update visible start index and load more files
+  function updateVisibleStartIndex() {
+    if (!scrolledWindow) return
+    
+    const adjustment = scrolledWindow.get_vadjustment()
+    const scrollPosition = adjustment.get_value()
+    const itemHeight = 80 // Approximate height per item with larger images
+    const startIndex = Math.floor(scrollPosition / itemHeight)
+    setVisibleStartIndex(startIndex)
+    
+    // Check if we need to load more files (infinite scrolling)
+    const currentList = list.get()
+    const fileResults = currentList.filter(item => item.type === 'file')
+    const maxScroll = adjustment.get_upper() - adjustment.get_page_size()
+    const scrollPercentage = scrollPosition / maxScroll
+    
+    // Load more when scrolled 80% and we have files and not already loading
+    if (scrollPercentage > 0.8 && 
+        fileResults.length >= 40 && 
+        !isLoadingMore.get() && 
+        hasMoreFiles.get() && 
+        currentSearchTerm) {
+      loadMoreFiles()
+    }
+  }
 
   // Load recent apps when launcher starts empty
   function loadInitialResults() {
@@ -123,42 +239,69 @@ export default function Applauncher() {
     }))
     setList(recentResults)
     setSelectedIndex(0)
+    setVisibleStartIndex(0)
     
-    // Calculate optimal window width
+    // Calculate optimal window width (60% of screen width)
     const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
-    const calculatedWidth = Math.max(450, Math.min(800, maxNameLength * 12 + 100))
+    const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+    const screenWidth = 1920 // Default fallback, could be improved with proper screen detection
+    const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
     setWindowWidth(calculatedWidth)
   }
 
-  async function searchFiles(text: string): Promise<void> {
+  // Load more files for infinite scrolling
+  function loadMoreFiles() {
+    if (!currentSearchTerm || isLoadingMore.get() || !hasMoreFiles.get()) return
+    
+    setIsLoadingMore(true)
+    const newOffset = fileSearchOffset.get() + 50
+    setFileSearchOffset(newOffset)
+    
+    // Search for more files with increased limit
+    searchFiles(currentSearchTerm, newOffset, true)
+  }
+
+  async function searchFiles(text: string, offset: number = 0, append: boolean = false): Promise<void> {
     try {
-      // Cancel any previous search
-      if (currentSearchAbort) {
+      // Cancel any previous search if this is a new search (not append)
+      if (!append && currentSearchAbort) {
         currentSearchAbort()
       }
 
       let cancelled = false
-      currentSearchAbort = () => { cancelled = true }
+      if (!append) {
+        currentSearchAbort = () => { cancelled = true }
+      }
 
-      // Use simple locate for file search
-      const cmd = `locate -i -l 50 "${text}"`
+      // Use locate with offset simulation (since locate doesn't have native offset)
+      // We'll get more results and slice them in memory for simplicity
+      const totalLimit = offset + 50
+      const cmd = `locate -i -l ${Math.min(totalLimit, 500)} "${text}"`
 
       // Start search with a small delay
-      GLib.timeout_add(GLib.PRIORITY_LOW, 50, () => {
-        if (cancelled) return false
+      GLib.timeout_add(GLib.PRIORITY_LOW, append ? 10 : 50, () => {
+        if (cancelled && !append) return false
         
         try {
           const [success, stdout] = GLib.spawn_command_line_sync(cmd)
-          if (!success || !stdout || cancelled) return false
+          if (!success || !stdout || (cancelled && !append)) return false
           
-          const files = stdout.toString().trim().split('\n').filter(line => line.length > 0)
+          let allFiles = stdout.toString().trim().split('\n').filter(line => line.length > 0)
+          
+          // Apply offset manually since locate doesn't support it natively
+          const files = allFiles.slice(offset, offset + 50)
+          
+          // Check if we have fewer files than requested (reached end)
+          if (files.length < 50 || allFiles.length < totalLimit) {
+            setHasMoreFiles(false)
+          }
           
           files.forEach((path, index) => {
-            if (cancelled) return
+            if (cancelled && !append) return
             
             // Add a small delay between each file to make it feel more responsive
             GLib.timeout_add(GLib.PRIORITY_LOW, index * 5, () => {
-              if (cancelled) return false
+              if (cancelled && !append) return false
               
               const name = GLib.path_get_basename(path)
               const isDirectory = GLib.file_test(path, GLib.FileTest.IS_DIR)
@@ -176,21 +319,40 @@ export default function Applauncher() {
               const currentAppResults = currentResults.filter(item => item.type === 'app')
               const currentFileResults = currentResults.filter(item => item.type === 'file')
               
-                  // Check if this file path already exists
-                  const isDuplicate = currentFileResults.some(item => item.path === path)
-                  if (!isDuplicate) {
-                    const combined = [...currentAppResults, ...currentFileResults, fileResult]
-                    setList(combined)
-                    
-                    // Update window width based on new content
-                    const maxNameLength = Math.max(...combined.map(r => (r.displayName || r.name).length), 20)
-                    const calculatedWidth = Math.max(450, Math.min(800, maxNameLength * 12 + 100))
-                    setWindowWidth(calculatedWidth)
-                  }              return false // Don't repeat
+              // Check if this file path already exists
+              const isDuplicate = currentFileResults.some(item => item.path === path)
+              if (!isDuplicate) {
+                const combined = [...currentAppResults, ...currentFileResults, fileResult]
+                setList(combined)
+                
+                // Update window width based on new content (60% of screen)
+                const maxNameLength = Math.max(...combined.map(r => (r.displayName || r.name).length), 20)
+                const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+                const screenWidth = 1920
+                const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+                setWindowWidth(calculatedWidth)
+              }
+              
+              // If this is the last file being processed and we're loading more
+              if (append && index === files.length - 1) {
+                setIsLoadingMore(false)
+              }
+              
+              return false // Don't repeat
             })
           })
+          
+          // If no files were added and we're appending, stop loading
+          if (append && files.length === 0) {
+            setIsLoadingMore(false)
+            setHasMoreFiles(false)
+          }
+          
         } catch (error) {
           console.error('Error with locate search:', error)
+          if (append) {
+            setIsLoadingMore(false)
+          }
         }
         
         return false // Don't repeat
@@ -198,11 +360,18 @@ export default function Applauncher() {
 
     } catch (error) {
       console.error('Error starting file search:', error)
+      if (append) {
+        setIsLoadingMore(false)
+      }
     }
   }
 
   async function search(text: string) {
     if (text === "") {
+      currentSearchTerm = ""
+      setFileSearchOffset(0)
+      setHasMoreFiles(true)
+      setIsLoadingMore(false)
       loadInitialResults()
       // Cancel any ongoing file search
       if (currentSearchAbort) {
@@ -212,8 +381,13 @@ export default function Applauncher() {
       return
     }
 
-    // Reset selection when searching
+    // Reset selection and infinite scroll state when searching
     setSelectedIndex(0)
+    setVisibleStartIndex(0)
+    setFileSearchOffset(0)
+    setHasMoreFiles(true)
+    setIsLoadingMore(false)
+    currentSearchTerm = text
 
     // Search apps first and display immediately
     const appResults: SearchResult[] = apps.fuzzy_query(text).slice(0, 6).map((app: AstalApps.Application) => ({
@@ -227,9 +401,11 @@ export default function Applauncher() {
     // Set initial results with just apps
     setList(appResults)
     
-    // Update window width based on app names
+    // Update window width based on app names (60% of screen)
     const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
-    const calculatedWidth = Math.max(450, Math.min(800, maxNameLength * 12 + 100))
+    const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+    const screenWidth = 1920
+    const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
     setWindowWidth(calculatedWidth)
 
     // Start streaming file search (will update the list as results come in)
@@ -293,11 +469,14 @@ export default function Applauncher() {
       return
     }
 
-    // Alt + number key shortcuts
+    // Alt + number key shortcuts (based on visible items)
     if (mod === Gdk.ModifierType.ALT_MASK) {
       for (const i of [1, 2, 3, 4, 5, 6, 7, 8, 9] as const) {
         if (keyval === Gdk[`KEY_${i}`]) {
-          return launch(currentList[i - 1])
+          const visibleIndex = visibleStartIndex.get() + (i - 1)
+          if (visibleIndex < currentList.length) {
+            return launch(currentList[visibleIndex])
+          }
         }
       }
     }
@@ -334,7 +513,7 @@ export default function Applauncher() {
         halign={Gtk.Align.CENTER}
         orientation={Gtk.Orientation.VERTICAL}
         widthRequest={windowWidth((w) => w)}
-        heightRequest={350}
+        heightRequest={list((l) => Math.min(800, Math.max(400, l.length * 80 + 150)))}
       >
         <entry
           $={(ref) => (searchentry = ref)}
@@ -343,38 +522,61 @@ export default function Applauncher() {
         />
         <Gtk.Separator visible={list((l) => l.length > 0)} />
         <Gtk.ScrolledWindow
+          $={(ref) => {
+            scrolledWindow = ref
+            // Connect scroll event handler
+            const adjustment = ref.get_vadjustment()
+            adjustment.connect('value-changed', updateVisibleStartIndex)
+          }}
           hscrollbarPolicy={Gtk.PolicyType.NEVER}
           vscrollbarPolicy={Gtk.PolicyType.AUTOMATIC}
-          minContentHeight={200}
-          maxContentHeight={400}
+          minContentHeight={list((l) => Math.min(600, Math.max(300, l.length * 80)))}
+          maxContentHeight={600}
         >
           <box orientation={Gtk.Orientation.VERTICAL}>
             <For each={list}>
               {(result, index) => (
                 <button 
                   onClicked={() => launch(result)}
+                  cssClasses={selectedIndex((i) => i === index.get() ? ['selected'] : [])}
                 >
-                  <box>
-                    <image iconName={result.icon} />
-                    <label 
-                      label={result.displayName} 
-                      maxWidthChars={40} 
-                      wrap 
-                    />
-                    {result.type === 'file' && (
-                      <label
-                        cssClasses={['file-path']}
-                        label={result.path || ''}
-                        maxWidthChars={30}
-                        ellipsize={3} // END
+                  <box spacing={10} cssClasses={['result-item']}>
+                    <box cssClasses={['icon-container']}>
+                      {result.type === 'file' && result.path && (isImageFile(result.path) || isVideoFile(result.path)) ? (
+                        createAsyncPreview(result.path)
+                      ) : (
+                        <image iconName={result.icon} iconSize={Gtk.IconSize.LARGE} />
+                      )}
+                    </box>
+                    <box orientation={Gtk.Orientation.VERTICAL} hexpand cssClasses={['content-container']}>
+                      <label 
+                        label={result.displayName} 
+                        maxWidthChars={50} 
+                        wrap
                         halign={Gtk.Align.START}
+                        cssClasses={['result-name']}
                       />
-                    )}
-                    <label
-                      hexpand
-                      halign={Gtk.Align.END}
-                      label={index((i) => `󰘳${i + 1}`)}
-                    />
+                      {result.type === 'file' && (
+                        <label
+                          cssClasses={['file-path']}
+                          label={result.path || ''}
+                          maxWidthChars={60}
+                          ellipsize={3} // END
+                          halign={Gtk.Align.START}
+                        />
+                      )}
+                    </box>
+                    <box cssClasses={['shortcut-container']}>
+                      <label
+                        halign={Gtk.Align.END}
+                        valign={Gtk.Align.CENTER}
+                        label={visibleStartIndex((start) => {
+                          const visiblePos = index.get() - start + 1
+                          return visiblePos > 0 && visiblePos <= 9 ? `󰘳${visiblePos}` : ''
+                        })}
+                        cssClasses={['shortcut-number']}
+                      />
+                    </box>
                   </box>
                 </button>
               )}

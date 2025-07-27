@@ -764,15 +764,19 @@ window[name="wallpaperpicker"] {
 
 // Application Launcher Styles
 window[name="launcher"] {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   
   .launcher-content {
-    background: #{"@background"};
+    background: rgba(0, 0, 0, 0.85);
     border: 2px solid #{"@on_surface"};
     border-radius: 0px;
     box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0,0,0,0.15);
     padding: 20px;
     margin: 10px;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     
     /* Search Entry */
     entry {
@@ -860,6 +864,43 @@ window[name="launcher"] {
       box {
         margin: 0 12px;
         
+        &.result-item {
+          margin: 0;
+          min-height: 80px;
+        }
+        
+        .icon-container {
+          min-width: 80px;
+          min-height: 80px;
+          margin-right: 12px;
+          
+          image {
+            min-width: 80px;
+            min-height: 80px;
+            max-width: 400px;
+            max-height: 400px;
+            border-radius: 0px;
+            border: 1px solid #{"@outline_variant"};
+            box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
+          }
+        }
+        
+        .content-container {
+          min-height: 80px;
+          justify-content: center;
+        }
+        
+        .shortcut-container {
+          min-width: 30px;
+          justify-content: center;
+          
+          .shortcut-number {
+            font-size: 12px;
+            color: #{"@on_surface_variant"};
+            font-weight: bold;
+          }
+        }
+        
         image {
           min-width: 20px;
           min-height: 20px;
@@ -870,6 +911,11 @@ window[name="launcher"] {
           color: inherit;
           font-weight: normal;
           margin-right: 8px;
+          
+          &.result-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+          }
           
           &.file-path {
             font-size: 11px;
