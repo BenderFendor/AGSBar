@@ -40,18 +40,21 @@ export default function Applauncher() {
     setVisibleStartIndex(startIndex)
     
     // Check if we need to load more files (infinite scrolling)
-    const currentList = list.get()
-    const fileResults = currentList.filter(item => item.type === 'file')
-    const maxScroll = adjustment.get_upper() - adjustment.get_page_size()
-    const scrollPercentage = scrollPosition / maxScroll
-    
-    // Load more when scrolled 80% and we have files and not already loading
-    if (scrollPercentage > 0.8 && 
-        fileResults.length >= 40 && 
-        !isLoadingMore.get() && 
-        hasMoreFiles.get() && 
-        currentSearchTerm) {
-      loadMoreFiles()
+    // Only for file search mode (when search term starts with /)
+    if (currentSearchTerm.startsWith('/')) {
+      const currentList = list.get()
+      const fileResults = currentList.filter(item => item.type === 'file')
+      const maxScroll = adjustment.get_upper() - adjustment.get_page_size()
+      const scrollPercentage = scrollPosition / maxScroll
+      
+      // Load more when scrolled 80% and we have files and not already loading
+      if (scrollPercentage > 0.8 && 
+          fileResults.length >= 40 && 
+          !isLoadingMore.get() && 
+          hasMoreFiles.get() && 
+          currentSearchTerm) {
+        loadMoreFiles()
+      }
     }
   }
 
@@ -65,28 +68,46 @@ export default function Applauncher() {
       displayName: app.name,
       icon: app.iconName || 'application-x-executable'
     }))
-    setList(recentResults)
+    
+    // If no recent apps, show some popular/default apps
+    if (recentResults.length === 0) {
+      const allApps = searchManager.searchApps('')
+      const defaultResults = allApps.slice(0, 8) // Show first 8 apps if no recent ones
+      setList(defaultResults)
+      
+      const maxNameLength = Math.max(...defaultResults.map(r => (r.displayName || r.name).length), 20)
+      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+      const screenWidth = 1920
+      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+      setWindowWidth(calculatedWidth)
+    } else {
+      setList(recentResults)
+      
+      const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
+      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+      const screenWidth = 1920
+      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+      setWindowWidth(calculatedWidth)
+    }
+    
     setSelectedIndex(0)
     setVisibleStartIndex(0)
-    
-    // Calculate optimal window width (60% of screen width)
-    const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
-    const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-    const screenWidth = 1920 // Default fallback, could be improved with proper screen detection
-    const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
-    setWindowWidth(calculatedWidth)
   }
 
   // Load more files for infinite scrolling
   function loadMoreFiles() {
     if (!currentSearchTerm || isLoadingMore.get() || !hasMoreFiles.get()) return
     
+    // Only load more files if we're in file search mode (starts with /)
+    if (!currentSearchTerm.startsWith('/')) return
+    
     setIsLoadingMore(true)
     const newOffset = fileSearchOffset.get() + 50
     setFileSearchOffset(newOffset)
     
-    // Search for more files with increased limit
-    searchFiles(currentSearchTerm, newOffset, true)
+    // Search for more files with increased limit (remove / prefix)
+    const fileSearchTerm = currentSearchTerm.slice(1)
+    searchFiles(fileSearchTerm, newOffset, true)
   }
 
   function searchFiles(text: string, offset: number = 0, append: boolean = false) {
@@ -100,7 +121,7 @@ export default function Applauncher() {
         // Check if this file path already exists
         const isDuplicate = currentFileResults.some(item => item.path === fileResult.path)
         if (!isDuplicate) {
-          const combined = [...currentAppResults, ...currentFileResults, fileResult]
+          const combined = [...currentFileResults, fileResult] // Only show files, no apps
           setList(combined)
           
           // Update window width based on new content (60% of screen)
@@ -141,21 +162,28 @@ export default function Applauncher() {
     setIsLoadingMore(false)
     currentSearchTerm = text
 
-    // Search apps first and display immediately
-    const appResults = searchManager.searchApps(text)
-
-    // Set initial results with just apps
-    setList(appResults)
-    
-    // Update window width based on app names (60% of screen)
-    const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
-    const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-    const screenWidth = 1920
-    const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
-    setWindowWidth(calculatedWidth)
-
-    // Start streaming file search (will update the list as results come in)
-    searchFiles(text)
+    // Check if searching for files/folders (starts with /)
+    if (text.startsWith('/')) {
+      // Only search files when starting with /
+      const fileSearchTerm = text.slice(1) // Remove the / prefix
+      if (fileSearchTerm.length > 0) {
+        setList([]) // Clear results while searching
+        searchFiles(fileSearchTerm)
+      } else {
+        setList([]) // Show empty list when just "/"
+      }
+    } else {
+      // Search apps only
+      const appResults = searchManager.searchApps(text)
+      setList(appResults)
+      
+      // Update window width based on app names (60% of screen)
+      const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
+      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+      const screenWidth = 1920
+      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+      setWindowWidth(calculatedWidth)
+    }
   }
 
   function launch(result?: SearchResult) {
@@ -311,7 +339,7 @@ export default function Applauncher() {
                         valign={Gtk.Align.CENTER}
                         label={visibleStartIndex((start) => {
                           const visiblePos = index.get() - start + 1
-                          return visiblePos > 0 && visiblePos <= 9 ? `󰘳${visiblePos}` : ''
+                          return visiblePos > 0 && visiblePos <= 9 ? `  󰘳${visiblePos}  ` : ''
                         })}
                         cssClasses={['shortcut-number']}
                       />

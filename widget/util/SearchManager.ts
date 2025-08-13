@@ -12,6 +12,17 @@ export class SearchManager {
   }
 
   searchApps(text: string): SearchResult[] {
+    if (text === '') {
+      // Return all apps when no search text
+      return this.apps.get_applications().slice(0, 20).map((app: AstalApps.Application) => ({
+        type: 'app' as const,
+        app,
+        name: app.name,
+        displayName: app.name,
+        icon: app.iconName || 'application-x-executable'
+      }))
+    }
+    
     return this.apps.fuzzy_query(text).slice(0, 6).map((app: AstalApps.Application) => ({
       type: 'app' as const,
       app,
