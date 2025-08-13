@@ -25,6 +25,13 @@ export default function Applauncher() {
   const [fileSearchOffset, setFileSearchOffset] = createState(0)
   const [isLoadingMore, setIsLoadingMore] = createState(false)
   const [hasMoreFiles, setHasMoreFiles] = createState(true)
+  const [launcherHeight, setLauncherHeight] = createState(60) // dynamic launcher height
+  const [rowHeight, setRowHeight] = createState(56) // measured row height (fallback)
+  let rowMeasured = false
+  // Helper to coerce row height to number
+  function getRowHeight(): number {
+    return Number(rowHeight((r: any) => r as number)) || 56
+  }
 
   let scrolledWindow: Gtk.ScrolledWindow
   let currentSearchTerm = ""
@@ -32,10 +39,9 @@ export default function Applauncher() {
   // Track scroll position to update visible start index and load more files
   function updateVisibleStartIndex() {
     if (!scrolledWindow) return
-    
     const adjustment = scrolledWindow.get_vadjustment()
     const scrollPosition = adjustment.get_value()
-    const itemHeight = 80 // Approximate height per item with larger images
+    const itemHeight = getRowHeight()
     const startIndex = Math.floor(scrollPosition / itemHeight)
     setVisibleStartIndex(startIndex)
     
@@ -77,7 +83,7 @@ export default function Applauncher() {
       
       const maxNameLength = Math.max(...defaultResults.map(r => (r.displayName || r.name).length), 20)
       const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = Gdk.Display.get_default()?.get_monitors().get_item(0)?.get_geometry().width || 1920
+      const screenWidth = 1920 // replaced get_geometry usage
       const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
       setWindowWidth(calculatedWidth)
     } else {
@@ -85,7 +91,7 @@ export default function Applauncher() {
       
       const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
       const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = Gdk.Display.get_default()?.get_monitors().get_item(0)?.get_geometry().width || 1920 
+      const screenWidth = 1920 // replaced get_geometry usage
       const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
       setWindowWidth(calculatedWidth)
     }
@@ -127,7 +133,7 @@ export default function Applauncher() {
           // Update window width based on new content (60% of screen)
           const maxNameLength = Math.max(...combined.map(r => (r.displayName || r.name).length), 20)
           const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-          const screenWidth = 1920
+          const screenWidth = 1920 // replaced get_geometry usage
           const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
           setWindowWidth(calculatedWidth)
         }
@@ -180,7 +186,7 @@ export default function Applauncher() {
       // Update window width based on app names (60% of screen)
       const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
       const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920
+      const screenWidth = 1920 // replaced get_geometry usage
       const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
       setWindowWidth(calculatedWidth)
     }
@@ -260,9 +266,47 @@ export default function Applauncher() {
     }
   }
 
+  // Recompute launcher height whenever list changes
+  list((l) => {
+    const itemHeight = getRowHeight()
+    const headerHeight = 60
+    const visibleItems = Math.min(l.length, 7)
+    const h = l.length === 0 ? headerHeight : headerHeight + visibleItems * itemHeight
+    setLauncherHeight(h)
+    return l
+  })
+
+  // Force window resize when launcherHeight changes
+  launcherHeight((h) => {
+    if (win) {
+      const w = windowWidth((w) => w)
+      try {
+        win.set_resizable(false)
+        if ((win as any).set_size_request) {
+          ;(win as any).set_size_request(w, h)
+        }
+      } catch (e) {
+        print(`resize error: ${e}`)
+      }
+    }
+    return h
+  })
+
+  function attachSizeLogging() {
+    if (contentbox && !(contentbox as any)._sizeLogged) {
+      ;(contentbox as any)._sizeLogged = true
+      contentbox.connect('size-allocate', (_w, rect) => {
+        print(`contentbox alloc: ${rect.width}x${rect.height}`)
+      })
+    }
+  }
+
   return (
     <window
-      $={(ref) => (win = ref)}
+      $={(ref) => {
+        win = ref
+        attachSizeLogging()
+      }}
       name="launcher"
       exclusivity={Astal.Exclusivity.IGNORE}
       keymode={Astal.Keymode.EXCLUSIVE}
@@ -274,22 +318,18 @@ export default function Applauncher() {
       <Gtk.EventControllerKey onKeyPressed={onKey} />
       <Gtk.GestureClick onPressed={onClick} />
       <box
-        $={(ref) => (contentbox = ref)}
+        $={(ref) => {
+          contentbox = ref
+          attachSizeLogging()
+        }}
         cssClasses={['launcher-content']}
         valign={Gtk.Align.CENTER}
         halign={Gtk.Align.CENTER}
         orientation={Gtk.Orientation.VERTICAL}
         widthRequest={windowWidth((w) => w)}
-        heightRequest={list((l) => {
-          // Calculate dynamic height based on items
-          const itemHeight = 80
-          const headerHeight = 60 // Entry + separator (reduced padding)
-          const actualItems = Math.min(l.length, 7) // Show max 7 items before scrolling
-          if (l.length === 0) {
-            return headerHeight // Just header when no items
-          }
-          return headerHeight + (actualItems * itemHeight)
-        })}
+        heightRequest={launcherHeight((h) => h)}
+        vexpand={false}
+        hexpand={false}
       >
         <entry
           $={(ref) => (searchentry = ref)}
@@ -306,16 +346,33 @@ export default function Applauncher() {
           }}
           hscrollbarPolicy={Gtk.PolicyType.NEVER}
           vscrollbarPolicy={list((l) => l.length > 7 ? Gtk.PolicyType.AUTOMATIC : Gtk.PolicyType.NEVER)}
-          minContentHeight={list((l) => l.length * 80)}
-          maxContentHeight={list((l) => l.length > 7 ? 560 : l.length * 80)}
+          minContentHeight={list((l) => {
+            const h = getRowHeight()
+            return l.length * h
+          })}
+          maxContentHeight={list((l) => {
+            const h = getRowHeight()
+            return l.length > 7 ? 7 * h : l.length * h
+          })}
           visible={list((l) => l.length > 0)}
         >
           <box orientation={Gtk.Orientation.VERTICAL}>
             <For each={list}>
               {(result, index) => (
-                <button 
+                <button
+                  $={(ref) => {
+                    // measure first row once
+                    if (!rowMeasured && index.get() === 0) {
+                      ref.connect('size-allocate', (_w, rect) => {
+                        if (!rowMeasured) {
+                          rowMeasured = true
+                          setRowHeight(rect.height)
+                        }
+                      })
+                    }
+                  }}
                   onClicked={() => launch(result)}
-                  cssClasses={selectedIndex((i) => i === index.get() ? ['selected'] : [])}
+                  cssClasses={selectedIndex((i) => (i === index.get() ? ['selected'] : []))}
                 >
                   <box spacing={10} cssClasses={['result-item']}>
                     <box cssClasses={['icon-container']}>
