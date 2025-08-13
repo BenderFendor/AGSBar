@@ -26,11 +26,12 @@ export default function Applauncher() {
   const [isLoadingMore, setIsLoadingMore] = createState(false)
   const [hasMoreFiles, setHasMoreFiles] = createState(true)
   const [launcherHeight, setLauncherHeight] = createState(60) // dynamic launcher height
-  const [rowHeight, setRowHeight] = createState(56) // measured row height (fallback)
+  const [rowHeight, setRowHeight] = createState(80) // measured row height (fallback)
   let rowMeasured = false
+
   // Helper to coerce row height to number
   function getRowHeight(): number {
-    return Number(rowHeight((r: any) => r as number)) || 56
+    return Number(rowHeight((r: any) => r as number)) || 80
   }
 
   let scrolledWindow: Gtk.ScrolledWindow
@@ -39,9 +40,10 @@ export default function Applauncher() {
   // Track scroll position to update visible start index and load more files
   function updateVisibleStartIndex() {
     if (!scrolledWindow) return
+    
     const adjustment = scrolledWindow.get_vadjustment()
     const scrollPosition = adjustment.get_value()
-    const itemHeight = getRowHeight()
+    const itemHeight = getRowHeight() // Use measured height
     const startIndex = Math.floor(scrollPosition / itemHeight)
     setVisibleStartIndex(startIndex)
     
@@ -66,38 +68,50 @@ export default function Applauncher() {
 
   // Load recent apps when launcher starts empty
   function loadInitialResults() {
-    const recentApps = CacheManager.loadRecentApps()
-    const recentResults: SearchResult[] = recentApps.map(app => ({
-      type: 'app' as const,
-      app,
-      name: app.name,
-      displayName: app.name,
-      icon: app.iconName || 'application-x-executable'
-    }))
-    
-    // If no recent apps, show some popular/default apps
-    if (recentResults.length === 0) {
-      const allApps = searchManager.searchApps('')
-      const defaultResults = allApps.slice(0, 8) // Show first 8 apps if no recent ones
-      setList(defaultResults)
+    try {
+      const recentApps = CacheManager.loadRecentApps()
+      const recentResults: SearchResult[] = recentApps.map(app => ({
+        type: 'app' as const,
+        app,
+        name: app.name,
+        displayName: app.name,
+        icon: app.iconName || 'application-x-executable'
+      }))
       
-      const maxNameLength = Math.max(...defaultResults.map(r => (r.displayName || r.name).length), 20)
-      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920 // replaced get_geometry usage
-      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
-      setWindowWidth(calculatedWidth)
-    } else {
-      setList(recentResults)
+      // If no recent apps, show some popular/default apps
+      if (recentResults.length === 0) {
+        try {
+          const allApps = searchManager.searchApps('')
+          const defaultResults = allApps.slice(0, 8) // Show first 8 apps if no recent ones
+          setList(defaultResults)
+          
+          const maxNameLength = Math.max(...defaultResults.map(r => (r.displayName || r.name).length), 20)
+          const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+          const screenWidth = 1920 // simplified to avoid get_geometry type issue
+          const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+          setWindowWidth(calculatedWidth)
+        } catch (appsError) {
+          console.error('Error loading default apps:', appsError)
+          // Set empty list if apps can't be loaded
+          setList([])
+        }
+      } else {
+        setList(recentResults)
+        
+        const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
+        const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+        const screenWidth = 1920 // simplified to avoid get_geometry type issue
+        const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+        setWindowWidth(calculatedWidth)
+      }
       
-      const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
-      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920 // replaced get_geometry usage
-      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
-      setWindowWidth(calculatedWidth)
+      setSelectedIndex(0)
+      setVisibleStartIndex(0)
+    } catch (error) {
+      console.error('Error in loadInitialResults:', error)
+      // Fallback to empty list
+      setList([])
     }
-    
-    setSelectedIndex(0)
-    setVisibleStartIndex(0)
   }
 
   // Load more files for infinite scrolling
@@ -133,7 +147,7 @@ export default function Applauncher() {
           // Update window width based on new content (60% of screen)
           const maxNameLength = Math.max(...combined.map(r => (r.displayName || r.name).length), 20)
           const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-          const screenWidth = 1920 // replaced get_geometry usage
+          const screenWidth = 1920
           const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
           setWindowWidth(calculatedWidth)
         }
@@ -180,15 +194,20 @@ export default function Applauncher() {
       }
     } else {
       // Search apps only
-      const appResults = searchManager.searchApps(text)
-      setList(appResults)
-      
-      // Update window width based on app names (60% of screen)
-      const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
-      const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920 // replaced get_geometry usage
-      const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
-      setWindowWidth(calculatedWidth)
+      try {
+        const appResults = searchManager.searchApps(text)
+        setList(appResults)
+        
+        // Update window width based on app names (60% of screen)
+        const maxNameLength = Math.max(...appResults.map(r => (r.displayName || r.name).length), 20)
+        const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
+        const screenWidth = 1920
+        const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
+        setWindowWidth(calculatedWidth)
+      } catch (error) {
+        console.error('Error searching apps:', error)
+        setList([])
+      }
     }
   }
 
@@ -292,20 +311,12 @@ export default function Applauncher() {
     return h
   })
 
-  function attachSizeLogging() {
-    if (contentbox && !(contentbox as any)._sizeLogged) {
-      ;(contentbox as any)._sizeLogged = true
-      contentbox.connect('size-allocate', (_w, rect) => {
-        print(`contentbox alloc: ${rect.width}x${rect.height}`)
-      })
-    }
-  }
-
   return (
     <window
       $={(ref) => {
         win = ref
-        attachSizeLogging()
+        // Initialize with recent apps once window is ready
+        loadInitialResults()
       }}
       name="launcher"
       exclusivity={Astal.Exclusivity.IGNORE}
@@ -318,10 +329,7 @@ export default function Applauncher() {
       <Gtk.EventControllerKey onKeyPressed={onKey} />
       <Gtk.GestureClick onPressed={onClick} />
       <box
-        $={(ref) => {
-          contentbox = ref
-          attachSizeLogging()
-        }}
+        $={(ref) => (contentbox = ref)}
         cssClasses={['launcher-content']}
         valign={Gtk.Align.CENTER}
         halign={Gtk.Align.CENTER}
@@ -359,20 +367,9 @@ export default function Applauncher() {
           <box orientation={Gtk.Orientation.VERTICAL}>
             <For each={list}>
               {(result, index) => (
-                <button
-                  $={(ref) => {
-                    // measure first row once
-                    if (!rowMeasured && index.get() === 0) {
-                      ref.connect('size-allocate', (_w, rect) => {
-                        if (!rowMeasured) {
-                          rowMeasured = true
-                          setRowHeight(rect.height)
-                        }
-                      })
-                    }
-                  }}
+                <button 
                   onClicked={() => launch(result)}
-                  cssClasses={selectedIndex((i) => (i === index.get() ? ['selected'] : []))}
+                  cssClasses={selectedIndex((i) => i === index.get() ? ['selected'] : [])}
                 >
                   <box spacing={10} cssClasses={['result-item']}>
                     <box cssClasses={['icon-container']}>

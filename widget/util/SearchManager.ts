@@ -4,32 +4,53 @@ import { SearchResult } from "./types"
 import { FileUtils } from "./FileUtils"
 
 export class SearchManager {
-  private apps: AstalApps.Apps
+  private apps: AstalApps.Apps | null = null
   private currentSearchAbort: (() => void) | null = null
 
   constructor() {
-    this.apps = new AstalApps.Apps()
+    try {
+      this.apps = new AstalApps.Apps()
+    } catch (error) {
+      console.error('Failed to initialize AstalApps.Apps:', error)
+      this.apps = null
+    }
   }
 
   searchApps(text: string): SearchResult[] {
-    if (text === '') {
-      // Return all apps when no search text
-      return this.apps.get_applications().slice(0, 20).map((app: AstalApps.Application) => ({
+    if (!this.apps) {
+      console.warn('Apps service not available')
+      return []
+    }
+
+    try {
+      if (text === '') {
+        // Return all apps when no search text
+        const applications = this.apps.get_applications()
+        if (!applications) return []
+        
+        return applications.slice(0, 20).map((app: AstalApps.Application) => ({
+          type: 'app' as const,
+          app,
+          name: app.name,
+          displayName: app.name,
+          icon: app.iconName || 'application-x-executable'
+        }))
+      }
+      
+      const results = this.apps.fuzzy_query(text)
+      if (!results) return []
+      
+      return results.slice(0, 6).map((app: AstalApps.Application) => ({
         type: 'app' as const,
         app,
         name: app.name,
         displayName: app.name,
         icon: app.iconName || 'application-x-executable'
       }))
+    } catch (error) {
+      console.error('Error searching apps:', error)
+      return []
     }
-    
-    return this.apps.fuzzy_query(text).slice(0, 6).map((app: AstalApps.Application) => ({
-      type: 'app' as const,
-      app,
-      name: app.name,
-      displayName: app.name,
-      icon: app.iconName || 'application-x-executable'
-    }))
   }
 
   async searchFiles(
@@ -100,7 +121,7 @@ export class SearchManager {
           })
           
         } catch (error) {
-          console.error('Error with locate search:', error)
+          console.error('Error executing file search:', error)
           onComplete(false)
         }
         
