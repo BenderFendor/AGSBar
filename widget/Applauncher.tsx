@@ -77,7 +77,7 @@ export default function Applauncher() {
       
       const maxNameLength = Math.max(...defaultResults.map(r => (r.displayName || r.name).length), 20)
       const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920
+      const screenWidth = Gdk.Display.get_default()?.get_monitors().get_item(0)?.get_geometry().width || 1920
       const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
       setWindowWidth(calculatedWidth)
     } else {
@@ -85,7 +85,7 @@ export default function Applauncher() {
       
       const maxNameLength = Math.max(...recentResults.map(r => (r.displayName || r.name).length), 20)
       const baseWidth = Math.max(800, Math.min(1200, maxNameLength * 12 + 200))
-      const screenWidth = 1920
+      const screenWidth = Gdk.Display.get_default()?.get_monitors().get_item(0)?.get_geometry().width || 1920 
       const calculatedWidth = Math.min(baseWidth, screenWidth * 0.6)
       setWindowWidth(calculatedWidth)
     }
@@ -280,7 +280,16 @@ export default function Applauncher() {
         halign={Gtk.Align.CENTER}
         orientation={Gtk.Orientation.VERTICAL}
         widthRequest={windowWidth((w) => w)}
-        heightRequest={list((l) => Math.min(800, Math.max(400, l.length * 80 + 150)))}
+        heightRequest={list((l) => {
+          // Calculate dynamic height based on items
+          const itemHeight = 80
+          const headerHeight = 60 // Entry + separator (reduced padding)
+          const actualItems = Math.min(l.length, 7) // Show max 7 items before scrolling
+          if (l.length === 0) {
+            return headerHeight // Just header when no items
+          }
+          return headerHeight + (actualItems * itemHeight)
+        })}
       >
         <entry
           $={(ref) => (searchentry = ref)}
@@ -297,8 +306,9 @@ export default function Applauncher() {
           }}
           hscrollbarPolicy={Gtk.PolicyType.NEVER}
           vscrollbarPolicy={Gtk.PolicyType.AUTOMATIC}
-          minContentHeight={list((l) => Math.min(600, Math.max(300, l.length * 80)))}
-          maxContentHeight={600}
+          minContentHeight={list((l) => l.length * 80)}
+          maxContentHeight={560}
+          propagateNaturalHeight={true}
         >
           <box orientation={Gtk.Orientation.VERTICAL}>
             <For each={list}>
