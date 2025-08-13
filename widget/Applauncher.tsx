@@ -305,10 +305,10 @@ export default function Applauncher() {
             adjustment.connect('value-changed', updateVisibleStartIndex)
           }}
           hscrollbarPolicy={Gtk.PolicyType.NEVER}
-          vscrollbarPolicy={Gtk.PolicyType.AUTOMATIC}
+          vscrollbarPolicy={list((l) => l.length > 7 ? Gtk.PolicyType.AUTOMATIC : Gtk.PolicyType.NEVER)}
           minContentHeight={list((l) => l.length * 80)}
-          maxContentHeight={560}
-          propagateNaturalHeight={true}
+          maxContentHeight={list((l) => l.length > 7 ? 560 : l.length * 80)}
+          visible={list((l) => l.length > 0)}
         >
           <box orientation={Gtk.Orientation.VERTICAL}>
             <For each={list}>
