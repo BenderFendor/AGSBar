@@ -25,13 +25,13 @@ export default function Applauncher() {
   const [fileSearchOffset, setFileSearchOffset] = createState(0)
   const [isLoadingMore, setIsLoadingMore] = createState(false)
   const [hasMoreFiles, setHasMoreFiles] = createState(true)
-  const [launcherHeight, setLauncherHeight] = createState(60) // dynamic launcher height
-  const [rowHeight, setRowHeight] = createState(80) // measured row height (fallback)
+  const [launcherHeight, setLauncherHeight] = createState(120) // dynamic launcher height
+  const [rowHeight, setRowHeight] = createState(100) // measured row height (increased for larger items)
   let rowMeasured = false
 
   // Helper to coerce row height to number
   function getRowHeight(): number {
-    return Number(rowHeight((r: any) => r as number)) || 80
+    return Number(rowHeight((r: any) => r as number)) || 100
   }
 
   let scrolledWindow: Gtk.ScrolledWindow
@@ -288,10 +288,18 @@ export default function Applauncher() {
   // Recompute launcher height whenever list changes
   list((l) => {
     const itemHeight = getRowHeight()
-    const headerHeight = 60
-    const visibleItems = Math.min(l.length, 7)
-    const h = l.length === 0 ? headerHeight : headerHeight + visibleItems * itemHeight
-    setLauncherHeight(h)
+    const headerHeight = 120 // Increased for larger search bar
+    const maxVisibleItems = 7
+    const visibleItems = Math.min(l.length, maxVisibleItems)
+    
+    // Dynamic height calculation
+    if (l.length === 0) {
+      setLauncherHeight(headerHeight)
+    } else {
+      // Add some padding for better visual spacing
+      const calculatedHeight = headerHeight + (visibleItems * itemHeight) + 40
+      setLauncherHeight(calculatedHeight)
+    }
     return l
   })
 
@@ -356,11 +364,16 @@ export default function Applauncher() {
           vscrollbarPolicy={list((l) => l.length > 7 ? Gtk.PolicyType.AUTOMATIC : Gtk.PolicyType.NEVER)}
           minContentHeight={list((l) => {
             const h = getRowHeight()
-            return l.length * h
+            const maxVisible = 7
+            const visibleItems = Math.min(l.length, maxVisible)
+            return visibleItems * h
           })}
           maxContentHeight={list((l) => {
             const h = getRowHeight()
-            return l.length > 7 ? 7 * h : l.length * h
+            const maxVisible = 7
+            // For file/image searches, allow up to 7 items to be visible
+            // For app searches, also allow up to 7 items
+            return l.length > maxVisible ? maxVisible * h : l.length * h
           })}
           visible={list((l) => l.length > 0)}
         >
