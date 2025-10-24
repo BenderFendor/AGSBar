@@ -16,7 +16,11 @@ app.start({
   css: style,
   gtkTheme: "adw-gtk3",
   requestHandler(request, res) {
-    const [, argv] = GLib.shell_parse_argv(request)
+    // Ensure we pass a string command line to GLib.shell_parse_argv.
+    // Some callers send the request as an Array (e.g. ['toggle']), so
+    // normalize to a space-joined string. If it's already a string leave it.
+    const commandLine = Array.isArray(request) ? request.join(" ") : String(request)
+    const [, argv] = GLib.shell_parse_argv(commandLine)
     if (!argv) return res("argv parse error")
 
     switch (argv[0]) {
