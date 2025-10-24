@@ -4,11 +4,13 @@ import css from "./colors.css"
 import Bar from "./widget/Bar"
 import NotificationPopups from "./widget/notifypopup"
 import Applauncher from "./widget/Applauncher"
+import PowerMenu from "./widget/PowerMenu"
 import { preloadWallpapersAsync } from "./widget/wallpaperpicker"
 import GLib from "gi://GLib"
 import Gtk from "gi://Gtk?version=4.0"
 
 let applauncher: Gtk.Window
+let powermenu: Gtk.Window
 
 app.apply_css("./colors.css")
 
@@ -30,14 +32,21 @@ app.start({
         }
         applauncher.visible = !applauncher.visible
         return res("ok")
+      case "powermenu":
+        if (!powermenu) return res("powermenu not initialized yet")
+        powermenu.visible = !powermenu.visible
+        return res("ok")
       default:
         return res("unknown command")
     }
   },
   main() {
-    // Initialize applauncher first so it's available for requests
+  // Initialize applauncher first so it's available for requests
     applauncher = Applauncher() as Gtk.Window
     app.add_window(applauncher)
+  // Power menu popup
+  powermenu = PowerMenu() as Gtk.Window
+  app.add_window(powermenu)
     
     app.get_monitors().map(Bar)
     NotificationPopups()
