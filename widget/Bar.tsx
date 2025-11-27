@@ -22,7 +22,7 @@ import { toggleWallpaperPicker } from "./wallpaperpicker"
 function MediaPlayerWindow() {
   const mpris = AstalMpris.get_default();
   const players = createBinding(mpris, "players");
-  
+
   return (
     <window
       name="media-player"
@@ -39,9 +39,8 @@ function MediaPlayerWindow() {
           <box orientation={Gtk.Orientation.VERTICAL} class="media-player-container">
             {/* Header with close button */}
             <box orientation={Gtk.Orientation.HORIZONTAL} class="media-header">
-              <label label="Media Player" class="media-header-title" />
               <box hexpand />
-              <button 
+              <button
                 onClicked={() => {
                   const window = app.get_window("media-player");
                   if (window) window.visible = false;
@@ -78,24 +77,24 @@ function MediaPlayerWindow() {
                 }}
               />
               <box orientation={Gtk.Orientation.HORIZONTAL} class="media-time-section">
-                <label 
+                <label
                   halign={Gtk.Align.START}
                   label={createBinding(player, "position")((pos: number) => {
                     const minutes = Math.floor(pos / 60);
                     const seconds = Math.floor(pos % 60);
                     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                  })} 
-                  class="media-time-current" 
+                  })}
+                  class="media-time-current"
                 />
                 <box hexpand />
-                <label 
+                <label
                   halign={Gtk.Align.END}
                   label={createBinding(player, "length")((len: number) => {
                     const minutes = Math.floor(len / 60);
                     const seconds = Math.floor(len % 60);
                     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                  })} 
-                  class="media-time-total" 
+                  })}
+                  class="media-time-total"
                 />
               </box>
             </box>
@@ -103,28 +102,28 @@ function MediaPlayerWindow() {
             {/* Control buttons */}
             <box orientation={Gtk.Orientation.HORIZONTAL} halign={Gtk.Align.CENTER} class="media-controls-section">
               {/* Previous button */}
-              <button 
-                onClicked={() => player.previous()} 
+              <button
+                onClicked={() => player.previous()}
                 class="media-btn media-btn-prev"
               >
                 <image iconName="media-skip-backward-symbolic" />
               </button>
 
               {/* Play/Pause button */}
-              <button 
-                onClicked={() => player.play_pause()} 
+              <button
+                onClicked={() => player.play_pause()}
                 class="media-btn media-btn-play"
               >
                 <image
-                  iconName={createBinding(player, "playbackStatus")((s: any) => 
+                  iconName={createBinding(player, "playbackStatus")((s: any) =>
                     s === AstalMpris.PlaybackStatus.PLAYING ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
                   )}
                 />
               </button>
 
               {/* Next button */}
-              <button 
-                onClicked={() => player.next()} 
+              <button
+                onClicked={() => player.next()}
                 class="media-btn media-btn-next"
               >
                 <image iconName="media-skip-forward-symbolic" />

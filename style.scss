@@ -52,20 +52,20 @@ window#bar {
     margin: 5px;
     color: #{"@on_surface"};
     box-shadow: 3px 3px 0 0.5px $shadow-color-transparent;
-    
+
     &:hover {
       background: #{"@primary"};
       color: #{"@on_primary"};
       box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
     }
-    
+
     &:active {
       background: #{"@tertiary"};
       box-shadow: inset 1px 1px 0 $shadow-color-transparent;
     }
   }
 
-  > box {
+  >box {
     background: transparent;
     border-radius: 0px;
     margin: 10px;
@@ -89,7 +89,8 @@ window#bar {
     background: $button-gradient-end;
 
     /* Inner and Outer Shadows for 3D Effect */
-    box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+    box-shadow: 4px 7px 0 0 $shadow-color;
+    /* Bottom edge highlight */
 
     /* Text Shadow */
     text-shadow: 0 1px 1px $button-text-shadow-color;
@@ -110,9 +111,12 @@ window#bar {
 
     &:active {
       /* "Pressed in" effect */
-      background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
-      box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
-      padding: 6px 15px 4px; /* Nudge text down */
+      background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start);
+      /* Reversed gradient */
+      box-shadow: inset 0 2px 4px $shadow-color;
+      /* Inset shadow */
+      padding: 6px 15px 4px;
+      /* Nudge text down */
     }
   }
 }
@@ -125,210 +129,244 @@ window#bar {
 // Media Player Styles - apply globally
 .media-player-container {
   background: #{"@background"};
-  border: none; /* Remove border */
+  border: 2px solid #{"@on_surface"};
+  /* Thicker border */
   border-radius: 0px;
-  box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0,0,0,0.15);
-  padding: 15px; /* More compact padding */
+  box-shadow: 10px 10px 0 0 $shadow-color;
+  /* More pronounced shadow */
+  padding: 24px;
   margin: 10px;
-  min-width: 350px; /* Smaller width */
+  min-width: 350px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  /* Subtle grain texture overlay if possible, otherwise just a solid background */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .media-header {
-  padding: 0px 15px; /* Remove vertical padding to let height control it */
-  margin: -15px -15px 15px -15px; /* Adjusted for new padding */
-  background: #{"@primary_container"};
-  box-shadow: 0 2px 0 0.5px $shadow-color-transparent;
-  min-height: 40px; /* Fixed height */
-  /* Center content vertically and horizontally */
+  margin: -8px -8px 24px -8px;
+  background: transparent;
+  box-shadow: none;
+  min-height: 32px;
 
-    .media-header-title {
-      font-family: "Product Sans", "Inter", sans-serif;
-      font-size: 12px; /* Product Sans Bold 12px */
-      font-weight: bold;
-      color: #{"@on_primary_container"};
-      /* Center the text */
-    }
-    
-    .media-close-btn {
-      background: #{"@red"}; /* Red background */
-      border: 0px solid #{"@on_red"};
-      border-radius: 0px;
-      padding: 6px; /* Smaller padding */
-      margin: 0;
+  .media-header-title {
+    font-family: "Product Sans", "Inter", sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    /* Bolder */
+    text-transform: uppercase;
+    /* Uppercase for that poster look */
+    color: #{"@on_surface"};
+    letter-spacing: 1px;
+  }
+
+  .media-close-btn {
+    background: #{"@surface_container"};
+    border: 2px solid #{"@on_surface"};
+    border-radius: 0px;
+    padding: 6px;
+    margin: 0;
+    color: #{"@on_surface"};
+    box-shadow: 4px 4px 0 0 $shadow-color;
+    min-width: 32px;
+    min-height: 32px;
+    transition: all 0.1s ease;
+
+    &:hover {
+      background: #{"@red"};
       color: #{"@on_red"};
-      box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
-      min-width: 24px;
-      min-height: 24px;
-      
+      border-color: #{"@on_red"};
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 $shadow-color;
+    }
+
+    &:active {
+      background: #{"@error"};
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 0 $shadow-color;
+    }
+
+    image {
+      -gtk-icon-size: 14px;
+    }
+  }
+}
+
+.media-cover-section {
+  margin-bottom: 24px;
+  border-radius: 0px;
+  box-shadow: 8px 8px 0 0 $shadow-color;
+  border: 2px solid #{"@on_surface"};
+  position: relative;
+
+  /* The "Flare" Effect - a pseudo-element glow behind/around */
+  box-shadow: 8px 8px 0 0 $shadow-color,
+  -4px -4px 0 0 #{"@primary_container"};
+  /* Secondary offset color */
+
+  .media-cover-image {
+    border: none;
+    border-radius: 0px;
+    min-width: 260px;
+    min-height: 260px;
+    background: #{"@surface_variant"};
+    -gtk-icon-size: 260px;
+    background-size: cover;
+    background-position: center;
+  }
+}
+
+.media-info-section {
+  margin-bottom: 24px;
+
+  .media-song-title {
+    font-size: 20px;
+    font-weight: 900;
+    /* Extra bold */
+    color: #{"@on_surface"};
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    /* Poster style */
+    letter-spacing: -0.5px;
+  }
+
+  .media-song-artist {
+    font-size: 14px;
+    font-weight: 600;
+    color: #{"@primary"};
+    /* Accent color for artist */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: #{"@surface_container"};
+    padding: 2px 6px;
+    border: 1px solid #{"@outline"};
+    /* Inline block style label */
+  }
+}
+
+.media-progress-section {
+  margin-bottom: 24px;
+
+  .media-progress-scale {
+    background: transparent;
+    border: none;
+    min-height: 12px;
+    /* Thicker */
+    margin-bottom: 8px;
+
+    trough {
+      background: #{"@surface_variant"};
+      border-radius: 0px;
+      min-height: 12px;
+      border: 2px solid #{"@on_surface"};
+    }
+
+    highlight {
+      background: linear-gradient(90deg, #{"@primary"}, #{"@tertiary"});
+      /* Gradient flare */
+      border-radius: 0px;
+      min-height: 12px;
+      border-right: 2px solid #{"@on_surface"};
+    }
+
+    slider {
+      background: #{"@on_surface"};
+      border: 2px solid #{"@on_surface"};
+      border-radius: 0px;
+      min-width: 20px;
+      min-height: 20px;
+      box-shadow: 4px 4px 0 0 $shadow-color;
+      margin: -4px 0;
+      transition: none;
+      opacity: 1;
+
       &:hover {
-        background: #{"@red_container"};
-        color: #{"@on_red_container"};
-        box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
-      }
-      
-      &:active {
-        background: #{"@error"};
-        box-shadow: inset 1px 1px 0 $shadow-color-transparent;
-      }
-      
-      image {
-        -gtk-icon-size: 12px; /* Smaller X icon */
+        transform: translate(-1px, -1px);
+        background: #{"@primary"};
+        box-shadow: 5px 5px 0 0 $shadow-color;
       }
     }
   }
 
-  .media-cover-section {
-    margin-bottom: 15px; /* More compact spacing */
-    
-    .media-cover-image {
-      border: 0px solid #{"@on_surface"};
-      border-radius: 0px;
-      min-width: 250px; /* Requested size */
-      min-height: 250px; /* Square */
-      background: transparent;
-      /* GTK Image styling for square aspect */
+  .media-time-section {
 
-      -gtk-icon-size: 300px;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
-  }
-
-  .media-info-section {
-    margin-bottom: 15px; /* More compact */
-    
-    .media-song-title {
-      font-size: 16px; /* Slightly smaller */
-      font-weight: bold;
+    .media-time-current,
+    .media-time-total {
+      font-size: 12px;
       color: #{"@on_surface"};
-      margin-bottom: 3px; /* Less spacing */
-    }
-    
-    .media-song-artist {
-      font-size: 13px; /* Slightly smaller */
-      font-weight: normal;
-      color: #{"@on_surface"}CC;
-    }
-  }
-
-  .media-progress-section {
-    margin-bottom: 15px; /* More compact */
-    
-    .media-progress-scale {
-      background: transparent;
-      border: 0px solid #{"@on_surface"};
-      border-radius: 0px;
-      min-height: 6px; /* Even thinner for compact design */
-      position: relative;
-      box-shadow: inset 0 0 0 1px #{"@outline"}, inset 1px 1px 0 0.5px $shadow-color-transparent;
-
-      trough {
-        background: #{"@surface_variant"};
-        border-radius: 0px;
-        min-height: 6px;
-        box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2);
-      }
-      
-      highlight {
-        background: linear-gradient(90deg, #{"@primary"}, #{"@tertiary"});
-        border-radius: 0px;
-        min-height: 6px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      }
-      
-      slider {
-        background: #{"@on_primary"};
-        border: 2px solid #{"@primary"};
-        border-radius: 0px;
-        min-width: 14px; /* Slightly smaller */
-        min-height: 14px;
-        box-shadow: 2px 2px 0 0.5px $shadow-color-transparent, 0 0 0 2px #{"@background"};
-        transition: all 0.2s ease;
-        
-        &:hover {
-          transform: scale(1.2);
-          box-shadow: 3px 3px 0 0.5px $shadow-color-transparent, 0 0 0 2px #{"@primary"};
-        }
-      }
-    }
-    
-    .media-time-section {
-      margin-top: 8px; /* Less spacing */
-      
-      .media-time-current, .media-time-total {
-        font-size: 11px; /* Smaller font */
-        color: #{"@on_surface"}99;
-        font-weight: 500;
-        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-      }
-    }
-  }
-
-  .media-controls-section {
-    
-    .media-btn {
+      font-weight: 700;
+      font-family: 'SF Mono', 'Monaco', monospace;
       background: #{"@surface_container"};
-      border: 0px solid #{"@on_surface"};
-      border-radius: 0px;
-      padding: 10px; /* Smaller padding */
-      color: #{"@on_surface"};
-      box-shadow: 2px 2px 0 0.5px $shadow-color-transparent; /* Smaller shadows */
-      min-width: 35px; /* Smaller buttons */
-      min-height: 35px;
-      transition: all 0.2s ease;
-      
-      /* Add subtle hover animation */
-      &:hover {
-        background: #{"@primary"};
-        color: #{"@on_primary"};
-        box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
-        transform: translateY(-1px);
-      }
-      
-      &:active {
-        background: #{"@tertiary"};
-        box-shadow: inset 1px 1px 0 $shadow-color-transparent;
-        transform: translateY(1px);
-      }
-      
-      &.media-btn-play {
-        background: #{"@primary"};
-        color: #{"@on_primary"};
-        min-width: 45px; /* Smaller play button */
-        min-height: 45px;
-        padding: 12px;
-        box-shadow: 3px 3px 0 0.5px $shadow-color-transparent;
-        
-        &:hover {
-          background: #{"@tertiary"};
-          color: #{"@on_tertiary"};
-          box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
-          transform: translateY(-2px);
-        }
-        
-        &:active {
-          background: #{"@inverse_primary"};
-          box-shadow: inset 2px 2px 0 $shadow-color-transparent;
-          transform: translateY(2px);
-        }
-      }
-      
-      /* Specifically ensure prev/next buttons are visible */
-      &.media-btn-prev,
-      &.media-btn-next {
-        opacity: 1;
-      }
-      
-      image {
-        -gtk-icon-size: 16px; /* Smaller icons */
-      }
-      
-      &.media-btn-play image {
-        -gtk-icon-size: 18px; /* Smaller play icon */
-      }
+      padding: 2px 4px;
+      border: 1px solid #{"@outline"};
     }
   }
+}
+
+.media-controls-section {
+  margin-bottom: 8px;
+
+  .media-btn {
+    background: #{"@surface_container"};
+    border: 2px solid #{"@on_surface"};
+    border-radius: 0px;
+    padding: 12px;
+    color: #{"@on_surface"};
+    box-shadow: 4px 4px 0 0 $shadow-color;
+    min-width: 48px;
+    min-height: 48px;
+    margin: 0 8px;
+    transition: all 0.1s ease;
+
+    &:hover {
+      background: #{"@primary"};
+      color: #{"@on_primary"};
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 0 $shadow-color;
+    }
+
+    &:active {
+      background: #{"@tertiary"};
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 0 $shadow-color;
+    }
+
+    &.media-btn-play {
+      background: #{"@primary"};
+      color: #{"@on_primary"};
+      min-width: 60px;
+      min-height: 60px;
+      padding: 14px;
+      box-shadow: 6px 6px 0 0 $shadow-color;
+
+      &:hover {
+        background: #{"@tertiary"};
+        color: #{"@on_tertiary"};
+        transform: translate(-2px, -2px);
+        box-shadow: 8px 8px 0 0 $shadow-color;
+      }
+
+      &:active {
+        background: #{"@inverse_primary"};
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 0 $shadow-color;
+      }
+
+      image {
+        -gtk-icon-size: 24px;
+      }
+    }
+
+    image {
+      -gtk-icon-size: 18px;
+    }
+  }
+}
+
+
 
 
 window.NotificationPopups {
@@ -338,7 +376,8 @@ window.NotificationPopups {
 .Notification {
   background-color: $bg-color;
   margin: 0.5rem 1rem;
-  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+  box-shadow: 4px 7px 0 0 $shadow-color;
+  /* Bottom edge highlight */
 
   &.critical {
     border: 1pt solid $error;
@@ -431,11 +470,11 @@ window.NotificationPopups {
   border: 0px solid $button-border-color;
   box-shadow: 4px 7px 0 0 $shadow-color;
   transition: all 0.3s ease;
-  
+
   &.opening {
     animation: wallpaper-picker-open 0.3s ease-out;
   }
-  
+
   &.closing {
     animation: wallpaper-picker-close 0.2s ease-in;
   }
@@ -446,6 +485,7 @@ window.NotificationPopups {
     opacity: 0;
     transform: scale(0.8);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -457,6 +497,7 @@ window.NotificationPopups {
     opacity: 1;
     transform: scale(1);
   }
+
   100% {
     opacity: 0;
     transform: scale(0.9);
@@ -496,18 +537,18 @@ window.NotificationPopups {
     box-shadow: 2px 2px 0 0.5px $shadow-color-transparent;
     min-width: 24px;
     min-height: 24px;
-    
+
     &:hover {
       background: #{"@red_container"};
       color: #{"@on_red_container"};
       box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
     }
-    
+
     &:active {
       background: #{"@error"};
       box-shadow: inset 1px 1px 0 $shadow-color-transparent;
     }
-    
+
     image {
       -gtk-icon-size: 12px;
     }
@@ -531,7 +572,8 @@ window.NotificationPopups {
   background: $button-gradient-end;
 
   /* Inner and Outer Shadows for 3D Effect */
-  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+  box-shadow: 4px 7px 0 0 $shadow-color;
+  /* Bottom edge highlight */
 
   /* Text Shadow */
   text-shadow: 0 1px 1px $button-text-shadow-color;
@@ -548,9 +590,12 @@ window.NotificationPopups {
 
   &:active {
     /* "Pressed in" effect */
-    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
-    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
-    padding: 6px 15px 4px; /* Nudge text down */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start);
+    /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color;
+    /* Inset shadow */
+    padding: 6px 15px 4px;
+    /* Nudge text down */
   }
 
   image {
@@ -575,7 +620,8 @@ window.NotificationPopups {
   background: $button-gradient-end;
 
   /* Inner and Outer Shadows for 3D Effect */
-  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+  box-shadow: 4px 7px 0 0 $shadow-color;
+  /* Bottom edge highlight */
 
   /* Text Shadow */
   text-shadow: 0 1px 1px $button-text-shadow-color;
@@ -592,9 +638,12 @@ window.NotificationPopups {
 
   &:active {
     /* "Pressed in" effect */
-    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
-    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
-    padding: 6px 15px 4px; /* Nudge text down */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start);
+    /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color;
+    /* Inset shadow */
+    padding: 6px 15px 4px;
+    /* Nudge text down */
   }
 
   image {
@@ -619,7 +668,8 @@ window.NotificationPopups {
   background: $button-gradient-end;
 
   /* Inner and Outer Shadows for 3D Effect */
-  box-shadow: 4px 7px 0 0 $shadow-color; /* Bottom edge highlight */
+  box-shadow: 4px 7px 0 0 $shadow-color;
+  /* Bottom edge highlight */
 
   /* Text Shadow */
   text-shadow: 0 1px 1px $button-text-shadow-color;
@@ -636,9 +686,12 @@ window.NotificationPopups {
 
   &:active {
     /* "Pressed in" effect */
-    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start); /* Reversed gradient */
-    box-shadow: inset 0 2px 4px $shadow-color; /* Inset shadow */
-    padding: 6px 5px 4px; /* Nudge content down */
+    background: linear-gradient(to bottom, $button-gradient-end, $button-gradient-start);
+    /* Reversed gradient */
+    box-shadow: inset 0 2px 4px $shadow-color;
+    /* Inset shadow */
+    padding: 6px 5px 4px;
+    /* Nudge content down */
   }
 
   picture {
@@ -666,7 +719,7 @@ window[name="wallpaperpicker"] {
   background: #{"@background"};
   border: 0px solid #{"@on_surface"};
   border-radius: 0px;
-  box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 8px 8px 0 0.5px $shadow-color-transparent, 0 4px 20px rgba(0, 0, 0, 0.15);
 
   .directory {
     color: $button-text-color;
@@ -711,13 +764,13 @@ window[name="wallpaperpicker"] {
     box-shadow: 1px 1px 0 0.5px $shadow-color-transparent;
     min-width: 20px;
     min-height: 20px;
-    
+
     &:hover {
       background: #{"@red_container"};
       color: #{"@on_red_container"};
       box-shadow: 0.5px 0.5px 0 0.5px $shadow-color-transparent;
     }
-    
+
     &:active {
       background: #{"@error"};
       box-shadow: inset 0.5px 0.5px 0 $shadow-color-transparent;
@@ -767,11 +820,13 @@ window[name="wallpaperpicker"] {
     transform: translateY(-30px) scale(0.9);
     filter: blur(15px);
   }
+
   60% {
     opacity: 0.8;
     transform: translateY(5px) scale(1.02);
     filter: blur(5px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -784,6 +839,7 @@ window[name="wallpaperpicker"] {
     opacity: 0;
     backdrop-filter: blur(0px);
   }
+
   100% {
     opacity: 1;
     backdrop-filter: blur(30px);
@@ -798,192 +854,199 @@ window[name="launcher"] {
   animation: launcher-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   .launcher-content {
-    background: transparent;
-    border: none;
-    border-radius: 20px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 
-                0 15px 30px rgba(0, 0, 0, 0.3);
+    background: #{"@background"};
+    border: 2px solid #{"@on_surface"};
+    border-radius: 0px;
+    box-shadow: 10px 10px 0 0 $shadow-color;
     padding: 32px;
     margin: 20px;
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     animation: launcher-slide-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    
+
+    /* Grain texture */
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+
     /* Search Entry */
     entry {
+      background: #{"@surface_container"};
+      border: 2px solid #{"@on_surface"};
+      border-radius: 0px;
+      box-shadow: 4px 4px 0 0 $shadow-color;
+      padding: 24px 28px;
+      margin-bottom: 32px;
+      font-size: 24px;
+      font-weight: 800;
+      color: #{"@on_surface"};
+      transition: all 0.1s ease;
+      text-shadow: none;
+      caret-color: #{"@primary"};
+
+      &:focus {
+        border: 2px solid #{"@primary"};
+        box-shadow: 6px 6px 0 0 $shadow-color;
+        background: #{"@surface_container"};
+        transform: translate(-2px, -2px);
+        text-shadow: none;
+      }
+
+      &::placeholder {
+        color: #{"@on_surface_variant"};
+        font-size: 24px;
+        font-weight: 600;
+        text-shadow: none;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+    }
+
+    /* Separator */
+    separator {
+      background: #{"@on_surface"};
+      min-height: 2px;
+      margin: 20px 0;
+      border-radius: 0px;
+      opacity: 0.5;
+    }
+
+    /* Scrolled window for results */
+    scrolledwindow {
       background: transparent;
       border: none;
       border-radius: 0px;
       box-shadow: none;
-      padding: 32px 36px;
-      margin-bottom: 32px;
-      font-size: 28px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.98);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-      
-      &:focus {
-        border: none;
-        box-shadow: none;
-        background: transparent;
-        transform: scale(1.03);
-        text-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
-      }
-      
-      &::placeholder {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 28px;
-        font-weight: 500;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-      }
-    }
-    
-    /* Separator */
-    separator {
-      background: linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(255, 255, 255, 0.2) 20%, 
-        rgba(255, 255, 255, 0.3) 50%, 
-        rgba(255, 255, 255, 0.2) 80%, 
-        transparent 100%);
-      min-height: 2px;
-      margin: 20px 0;
-      border-radius: 2px;
-    }
-    
-    /* Scrolled window for results */
-    scrolledwindow {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-                  0 4px 16px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+
       scrollbar {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 10px;
-        min-width: 10px;
-        
+        background: #{"@surface_variant"};
+        border-radius: 0px;
+        min-width: 12px;
+
         slider {
-          background: rgba(255, 255, 255, 0.4);
-          border-radius: 10px;
+          background: #{"@on_surface"};
+          border-radius: 0px;
           min-width: 8px;
           min-height: 24px;
-          transition: all 0.2s ease;
-          
+          transition: none;
+          border: 1px solid #{"@background"};
+
           &:hover {
-            background: rgba(255, 255, 255, 0.6);
+            background: #{"@primary"};
           }
         }
       }
     }
-    
+
     /* Result buttons */
     button {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-      padding: 20px 24px;
+      background: #{"@surface_container"};
+      border: 2px solid #{"@outline"};
+      border-radius: 0px;
+      box-shadow: 4px 4px 0 0 $shadow-color;
+      padding: 16px 20px;
       margin: 8px 0;
-      color: rgba(255, 255, 255, 0.95);
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      
+      color: #{"@on_surface"};
+      transition: all 0.1s ease;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+
       &:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-        color: rgba(255, 255, 255, 1);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25),
-                    0 0 0 2px rgba(255, 255, 255, 0.1);
-        transform: translateY(-3px) scale(1.02);
+        background: #{"@primary"};
+        border-color: #{"@on_primary"};
+        color: #{"@on_primary"};
+        box-shadow: 6px 6px 0 0 $shadow-color;
+        transform: translate(-2px, -2px);
       }
-      
-      &:active, &.selected {
-        background: rgba(255, 255, 255, 0.2);
-        border-color: rgba(255, 255, 255, 0.4);
-        color: rgba(255, 255, 255, 1);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        transform: translateY(-1px) scale(1.01);
+
+      &:active,
+      &.selected {
+        background: #{"@tertiary"};
+        border-color: #{"@on_tertiary"};
+        color: #{"@on_tertiary"};
+        box-shadow: 2px 2px 0 0 $shadow-color;
+        transform: translate(2px, 2px);
       }
-      
+
       /* Button content layout */
       box {
         margin: 0 20px;
-        
+
         &.result-item {
           margin: 0;
-          min-height: 88px;
+          min-height: 72px;
         }
-        
+
         .icon-container {
-          min-width: 88px;
-          min-height: 88px;
+          min-width: 72px;
+          min-height: 72px;
           margin-right: 20px;
-          
+
           image {
-            min-width: 88px;
-            min-height: 88px;
-            max-width: 440px;
-            max-height: 440px;
-            border-radius: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            min-width: 72px;
+            min-height: 72px;
+            max-width: 72px;
+            max-height: 72px;
+            border-radius: 0px;
+            border: 2px solid #{"@on_surface"};
+            box-shadow: 4px 4px 0 0 $shadow-color;
+            background: #{"@surface_variant"};
           }
         }
-        
+
         .content-container {
-          min-height: 88px;
+          min-height: 72px;
           justify-content: center;
         }
-        
+
         .shortcut-container {
-          min-width: 48px;
+          min-width: 40px;
           justify-content: center;
-          
+
           .shortcut-number {
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.8);
-            font-weight: 700;
-            background: rgba(255, 255, 255, 0.15);
-            padding: 6px 12px;
-            border-radius: 12px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            color: #{"@on_surface"};
+            font-weight: 800;
+            background: #{"@surface_variant"};
+            padding: 4px 10px;
+            border-radius: 0px;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: 2px solid #{"@on_surface"};
+            box-shadow: 2px 2px 0 0 $shadow-color;
           }
         }
-        
+
         image {
-          min-width: 28px;
-          min-height: 28px;
+          min-width: 24px;
+          min-height: 24px;
           margin-right: 16px;
         }
-        
+
         label {
           color: inherit;
           font-weight: normal;
           margin-right: 16px;
-          
+
           &.result-name {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: rgba(255, 255, 255, 0.98);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 4px;
+            color: inherit;
+            text-shadow: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
           }
-          
+
           &.file-path {
-            font-size: 15px;
-            color: rgba(255, 255, 255, 0.7);
-            opacity: 0.95;
-            font-weight: 500;
+            font-size: 13px;
+            color: inherit;
+            opacity: 0.8;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', monospace;
           }
         }
       }
